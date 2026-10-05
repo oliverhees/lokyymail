@@ -1,0 +1,7 @@
+{% extends "base.html" %}
+{% block title %}Fehler · LokyyMail{% endblock %}
+{% block content %}
+<h1>{% if status == 404 %}Nicht gefunden{% elif status == 403 %}Kein Zugriff{% else %}Das hat nicht geklappt{% endif %}</h1>
+<p class="lead">{{ message }}</p>
+<p><a href="/">Zur Übersicht</a></p>
+{% endblock %}

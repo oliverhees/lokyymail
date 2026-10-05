@@ -1,0 +1,7 @@
+<li>
+  <a class="row" href="/proposals/{{ p.id }}">
+    <span class="title">{{ p.action_label }}{% if p.preview.to %} an {{ p.preview.to | join(', ') }}{% elif p.preview.original %}: {{ p.preview.original.subject }}{% elif p.preview.messages %} ({{ p.preview.messages | length }} Mails){% endif %}</span>
+    <span class="meta">{{ p.preview.mailbox }} · beantragt {{ p.created_at | local }}{% if p.requested_via == 'ai' %} von der KI{% endif %}{% if p.risk_level == 'high' %} · <span class="risk-high">hohes Risiko</span>{% endif %}</span>
+    <span class="side"><span class="stamp {{ p.status }}">{{ status_names[p.status] if status_names is defined else p.status }}</span></span>
+  </a>
+</li>

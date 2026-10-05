@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% set hide_nav = True %}
+{% block title %}Zwei-Faktor einrichten · LokyyMail{% endblock %}
+{% block content %}
+<div class="auth">
+  <h1>Zwei-Faktor einrichten</h1>
+  <p class="lead">Ohne zweiten Faktor gibt es keine Freigaben. Das dauert eine Minute.</p>
+  {% if request.query_params.get('fehler') %}<p class="error" role="alert">Der Code stimmt nicht. Bitte erneut versuchen.</p>{% endif %}
+  <div class="letter">
+    <ol>
+      <li>Authenticator-App öffnen (z. B. Aegis, 2FAS, Google oder Microsoft Authenticator).</li>
+      <li>Diesen Code scannen:</li>
+    </ol>
+    <div class="qr">{{ qr_svg | safe }}</div>
+    <details><summary>Scannen geht nicht?</summary><p class="small">Schlüssel manuell eingeben: <code class="secret">{{ secret }}</code></p></details>
+    <form method="post" action="/setup/2fa" class="spaced">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <div class="field code-field"><label for="code">3. Angezeigten Code eingeben</label><input type="text" id="code" name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="7" required></div>
+      <button class="primary" type="submit">Einrichten</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

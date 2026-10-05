@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% set hide_nav = True %}
+{% block title %}Code eingeben · LokyyMail{% endblock %}
+{% block content %}
+<div class="auth">
+  <h1>Code eingeben</h1>
+  <p class="lead">Öffne deine Authenticator-App und gib den 6-stelligen Code für LokyyMail ein.</p>
+  {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+  <form method="post" action="/login/code" class="letter">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <div class="field code-field"><label for="code">Code</label><input type="text" id="code" name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9 ]{6,7}" maxlength="7" required autofocus></div>
+    <button class="primary" type="submit">Bestätigen</button>
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% set status_names = {'pending':'Offen','executed':'Ausgeführt','rejected':'Abgelehnt','expired':'Abgelaufen','failed':'Fehlgeschlagen','uncertain':'Unklar','superseded':'Überholt','withdrawn':'Zurückgezogen','executing':'Läuft'} %}
+{% block title %}Freigaben · LokyyMail{% endblock %}
+{% block content %}
+<h1>Freigaben</h1>
+<p class="lead">
+  {% for key, name in [('pending','Offen'),('executed','Ausgeführt'),('rejected','Abgelehnt'),('all','Alle')] %}
+    {% if status == key %}<strong>{{ name }}</strong>{% else %}<a href="/proposals?status={{ key }}">{{ name }}</a>{% endif %}{% if not loop.last %} · {% endif %}
+  {% endfor %}
+</p>
+{% if items %}
+<ul class="list">{% for p in items %}{% include "_proposal_row.html" %}{% endfor %}</ul>
+{% else %}
+<p class="empty">Keine Anträge in dieser Ansicht.</p>
+{% endif %}
+{% endblock %}

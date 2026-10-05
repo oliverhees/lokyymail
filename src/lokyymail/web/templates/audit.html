@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Protokoll · LokyyMail{% endblock %}
+{% block content %}
+<h1>Protokoll</h1>
+<p class="lead">Wer hat wann was getan. Ohne Mailinhalte. <a href="/audit.csv">Als CSV herunterladen</a></p>
+<div class="scroll"><table class="plain">
+  <thead><tr><th>Zeit</th><th>Ereignis</th><th>Akteur</th><th>Postfach</th><th>Details</th></tr></thead>
+  <tbody>
+  {% for e in items %}
+  <tr><td>{{ e.ts | local }}</td><td>{{ e.event }}</td><td>{{ e.actor_type }}{% if e.actor_id %} <span class="muted small">{{ e.actor_id[:8] }}</span>{% endif %}</td><td class="small">{{ (e.mailbox_id or '')[:8] }}</td><td class="small">{% for k, v in e.detail.items() %}{{ k }}={{ v }} {% endfor %}</td></tr>
+  {% endfor %}
+  </tbody>
+</table></div>
+{% endblock %}

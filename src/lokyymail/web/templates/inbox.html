@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Posteingang · LokyyMail{% endblock %}
+{% block content %}
+<p class="small"><a href="/mailboxes">Postfächer</a></p>
+<h1>{{ mailbox.address if mailbox else 'Postfach' }}</h1>
+<form method="get" class="inline spaced" role="search">
+  <input type="search" name="q" value="{{ q }}" placeholder="Suchen, z. B. is:unread oder from:anna@firma.de" aria-label="Suche">
+  <button type="submit">Suchen</button>
+</form>
+{% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+{% if messages %}
+<ul class="list spaced">
+{% for m in messages %}
+  <li><a class="row {{ 'unread' if m.unread }}" href="/mailboxes/{{ mailbox.id }}/messages/{{ m.id }}">
+    <span class="title">{{ m.subject or '(ohne Betreff)' }}</span>
+    <span class="meta">{{ m['from'] }} · {{ m.snippet[:120] }}</span>
+  </a></li>
+{% endfor %}
+</ul>
+{% elif not error %}
+<p class="empty">Keine Mails gefunden.</p>
+{% endif %}
+{% endblock %}

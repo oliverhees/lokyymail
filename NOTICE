@@ -1,0 +1,14 @@
+LokyyMail
+Copyright (c) 2026 Oliver Hees aka Aiianer – https://aiianer.de
+
+Eigenentwicklung. Ideen aus „hermes-gmail-desktop-plugin“ (Michael Guber, Lizenz „Private“) wurden
+NICHT als Code übernommen; LokyyMail wurde nach eigener Beschreibung neu entwickelt (Stand: 05.10.2026).
+Teile (Anhang-Auswertung) stammen aus „Gmail Guard für Hermes“ desselben Urhebers.
+
+Fremdsoftware (nicht enthalten, per pip installiert): fastapi (MIT), uvicorn (BSD-3), SQLAlchemy (MIT),
+psycopg (LGPL-3.0), pydantic (MIT), jinja2 (BSD-3), argon2-cffi (MIT), pyotp (MIT), segno (BSD-3),
+cryptography (Apache-2.0/BSD), nh3 (MIT), mcp (MIT), google-api-python-client (Apache-2.0),
+google-auth (Apache-2.0), requests (Apache-2.0), pypdf (BSD-3), python-docx (MIT).
+
+„Hermes“ ist ein Open-Source-Projekt von Nous Research. „Gmail“ und „Google Workspace“ sind Marken
+der Google LLC. LokyyMail steht in keiner offiziellen Verbindung zu Nous Research oder Google.

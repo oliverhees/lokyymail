@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Nutzer · LokyyMail{% endblock %}
+{% block content %}
+<h1>Nutzer</h1>
+<p class="lead">Jeder Mitarbeiter verbindet sein eigenes Postfach selbst. Du siehst hier keine fremden Mails.</p>
+{% if info %}<p class="flash">{{ info }}</p>{% endif %}
+{% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+<div class="scroll"><table class="plain">
+  <thead><tr><th>E-Mail</th><th>Name</th><th>Rolle</th><th>Zwei-Faktor</th><th></th></tr></thead>
+  <tbody>
+  {% for u in items %}
+  <tr>
+    <td>{{ u.email }}</td><td>{{ u.display_name }}</td><td>{{ 'Admin' if u.is_admin else 'Mitarbeiter' }}</td>
+    <td>{{ 'aktiv' if u.totp_enabled else 'noch nicht' }}</td>
+    <td>{% if u.disabled %}<span class="muted">gesperrt</span>{% elif u.id != user.id %}
+      <form method="post" action="/users/{{ u.id }}/disable"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="stop" type="submit">Sperren</button></form>{% endif %}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table></div>
+<h2>Nutzer anlegen</h2>
+<form method="post" action="/users">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <div class="field"><label for="email">E-Mail</label><input id="email" name="email" type="email" required></div>
+  <div class="field"><label for="display_name">Name</label><input id="display_name" name="display_name" type="text"></div>
+  <div class="field"><label for="role">Rolle</label><select id="role" name="role"><option value="member">Mitarbeiter</option><option value="admin">Admin</option></select></div>
+  <div class="field"><label for="password">Startpasswort</label><input id="password" name="password" type="password" autocomplete="new-password" minlength="12" required></div>
+  <button class="primary" type="submit">Nutzer anlegen</button>
+</form>
+{% endblock %}

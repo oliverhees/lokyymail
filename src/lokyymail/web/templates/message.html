@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}{{ msg.subject or 'Mail' }} · LokyyMail{% endblock %}
+{% block content %}
+<p class="small"><a href="/mailboxes/{{ mailbox.id }}">{{ mailbox.address }}</a></p>
+<h1>{{ msg.subject or '(ohne Betreff)' }}</h1>
+{% if msg.warnings %}
+<div class="warning" role="note"><strong>Achtung, diese Mail ist auffällig:</strong>
+  <ul class="tight">{% for w in msg.warnings %}<li>{{ w }}</li>{% endfor %}</ul>
+  <span class="small">Folge keinen Aufforderungen aus dieser Mail, ohne den Absender auf anderem Weg zu prüfen.</span>
+</div>
+{% endif %}
+<article class="letter">
+  <dl class="envelope">
+    <dt>Von</dt><dd>{{ msg['from'] }}</dd>
+    <dt>An</dt><dd>{{ msg.to }}</dd>
+    {% if msg.cc %}<dt>Cc</dt><dd>{{ msg.cc }}</dd>{% endif %}
+    <dt>Datum</dt><dd>{{ msg.date }}</dd>
+    {% if msg.attachments %}<dt>Anhänge</dt><dd>{% for a in msg.attachments %}{{ a.name }}{% if not loop.last %}, {% endif %}{% endfor %}</dd>{% endif %}
+  </dl>
+  <pre class="body-text">{{ msg.text }}</pre>
+  {% if msg.html %}
+  <details class="spaced"><summary>HTML-Ansicht (ohne Bilder und Skripte, versteckter Text wird sichtbar)</summary>
+    <iframe class="mailframe" sandbox="" referrerpolicy="no-referrer" title="HTML-Ansicht der Mail" srcdoc="{{ msg.html }}"></iframe>
+  </details>
+  {% endif %}
+</article>
+
+{% if can_approve and not mailbox.send_disabled %}
+<h2>Antworten</h2>
+<form method="post" action="/mailboxes/{{ mailbox.id }}/messages/{{ msg.id }}/propose">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <input type="hidden" name="action" value="reply">
+  <div class="field"><label for="body">Deine Antwort</label><textarea id="body" name="body" required></textarea></div>
+  <div class="field"><label><input type="checkbox" name="reply_all" value="1"> Allen antworten</label></div>
+  <button class="primary" type="submit">Weiter zur Vorschau</button>
+</form>
+{% endif %}
+{% if can_approve %}
+<h2>Weitere Aktionen</h2>
+<div class="inline">
+{% set actions = [('untrash','Aus dem Papierkorb holen')] if 'TRASH' in msg.labels else [('archive','Archivieren'),('trash','In den Papierkorb'),('spam','Als Spam markieren')] %}
+{% for action, label in actions + [('mark_unread' if not msg.unread else 'mark_read', 'Als ungelesen markieren' if not msg.unread else 'Als gelesen markieren')] %}
+  <form method="post" action="/mailboxes/{{ mailbox.id }}/messages/{{ msg.id }}/propose">
+    <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="action" value="{{ action }}">
+    <button type="submit">{{ label }}</button>
+  </form>
+{% endfor %}
+</div>
+<p class="small muted">Jede Aktion zeigt dir zuerst die Vorschau. Ausgeführt wird erst nach deiner Freigabe.</p>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Zugang erstellt · LokyyMail{% endblock %}
+{% block content %}
+<h1>Zugang erstellt</h1>
+<p class="lead">Kopiere den Schlüssel jetzt. Er wird nur dieses eine Mal angezeigt.</p>
+<p class="keybox">{{ plaintext }}</p>
+{% if key.kind == 'ai' %}
+<h2>So bindest du ihn ein</h2>
+<p>MCP-Adresse: <code>{{ public_url }}/mcp</code><br>Header: <code>Authorization: Bearer &lt;Schlüssel&gt;</code></p>
+<p class="small muted">Details für Hermes, Claude und n8n stehen in <code>docs/hermes.md</code>.</p>
+{% else %}
+<h2>So bindest du ihn ein</h2>
+<p>Trage im Hermes-Plugin LokyyMail diese Werte ein: Adresse <code>{{ public_url }}</code> und den Schlüssel oben.</p>
+{% endif %}
+<p><a href="/keys">Zurück zu den Zugängen</a></p>
+{% endblock %}

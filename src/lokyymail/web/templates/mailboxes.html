@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Postfächer · LokyyMail{% endblock %}
+{% block content %}
+<h1>Postfächer</h1>
+<p class="lead">Neue Postfächer starten ohne KI-Zugriff. Du entscheidest pro Postfach, ob die KI es lesen darf und ob Senden überhaupt möglich ist.</p>
+{% if info %}<p class="flash">{{ info }}</p>{% endif %}
+{% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+
+{% if boxes %}
+<ul class="list">
+{% for m, a in boxes %}
+  <li>
+    <div class="row">
+      <span class="title"><a href="/mailboxes/{{ m.id }}">{{ m.address }}</a></span>
+      <span class="meta">{{ {'gmail':'Google Workspace','demo':'Demo'}.get(m.provider, m.provider) }} · {{ {'owner':'Inhaber','approver':'Freigeber','reader':'Lesen'}[a.role] }}{% if m.send_disabled %} · <strong>Senden komplett aus</strong>{% endif %}{% if m.status != 'active' %} · getrennt{% endif %}</span>
+      <span class="side inline">
+        {% if a.role == 'owner' or user.is_admin %}
+        <form method="post" action="/mailboxes/{{ m.id }}/ai">
+          <input type="hidden" name="csrf" value="{{ csrf }}">
+          <input type="hidden" name="enabled" value="{{ '0' if m.ai_enabled else '1' }}">
+          <button type="submit">{{ 'KI-Zugriff sperren' if m.ai_enabled else 'KI-Zugriff erlauben' }}</button>
+        </form>
+        {% if m.send_disabled %}
+        <form method="post" action="/mailboxes/{{ m.id }}/sending" class="inline">
+          <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="enabled" value="1">
+          <input type="text" name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="7" placeholder="Code" aria-label="Code aus der App" class="code-small" required>
+          <button type="submit">Senden erlauben</button>
+        </form>
+        {% else %}
+        <form method="post" action="/mailboxes/{{ m.id }}/sending">
+          <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="enabled" value="0">
+          <button type="submit">Senden komplett aus</button>
+        </form>
+        {% endif %}
+        {% if m.status == 'active' %}
+        <form method="post" action="/mailboxes/{{ m.id }}/disconnect">
+          <input type="hidden" name="csrf" value="{{ csrf }}">
+          <button class="stop" type="submit">Trennen</button>
+        </form>
+        {% endif %}
+        {% endif %}
+      </span>
+    </div>
+  </li>
+{% endfor %}
+</ul>
+{% else %}
+<p class="empty">Noch kein Postfach verbunden.</p>
+{% endif %}
+
+<h2>Postfach verbinden</h2>
+{% if google_ready %}
+<form method="post" action="/mailboxes/google/start" class="inline">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <button class="primary" type="submit">Mit Google Workspace verbinden</button>
+</form>
+<p class="small muted">Du wirst zu Google weitergeleitet und meldest dich mit deinem Firmenkonto an.</p>
+{% else %}
+<p class="warning"><strong>Google ist noch nicht eingerichtet.</strong> Der Administrator muss <code>LOKYY_GOOGLE_CLIENT_ID</code> und <code>LOKYY_GOOGLE_CLIENT_SECRET</code> setzen. Weiterleitungs-Adresse für Google: <code>{{ redirect_uri }}</code></p>
+{% endif %}
+<p class="small muted">Microsoft 365 und IMAP folgen in Phase 4.</p>
+{% if demo %}
+<form method="post" action="/mailboxes/demo" class="spaced">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <button type="submit">Demo-Postfach anlegen</button>
+</form>
+{% endif %}
+{% endblock %}

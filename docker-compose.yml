@@ -1,0 +1,70 @@
+# LokyyMail für Coolify – eine Instanz pro Kunde.
+# Coolify: Resource → Docker Compose → dieses Repo → diese Datei.
+# Pflicht in "Environment Variables": LOKYY_PUBLIC_URL, LOKYY_MASTER_KEY, POSTGRES_PASSWORD
+# Domain in Coolify auf den Dienst "lokyymail" (Port 8080) legen.
+#
+# WICHTIG: Hermes darf KEINEN Zugang zu Coolify, Docker oder dieser Datenbank haben.
+# Wer an den Server kommt, kommt an alle Schlüssel. Siehe docs/sicherheit.md.
+
+x-hardening: &hardening
+  read_only: true
+  tmpfs: [/tmp]
+  cap_drop: [ALL]
+  security_opt: ["no-new-privileges:true"]
+  restart: unless-stopped
+  pids_limit: 200
+
+x-env: &env
+  LOKYY_PUBLIC_URL: "${LOKYY_PUBLIC_URL:?LOKYY_PUBLIC_URL fehlt, z. B. https://mail.kunde.de}"
+  LOKYY_MASTER_KEY: "${LOKYY_MASTER_KEY:?LOKYY_MASTER_KEY fehlt, erzeugen mit: openssl rand -base64 32}"
+  LOKYY_DATABASE_URL: "postgresql+psycopg://lokyy:${POSTGRES_PASSWORD}@postgres:5432/lokyymail"
+  LOKYY_ORG_DOMAINS: "${LOKYY_ORG_DOMAINS:-}"
+  LOKYY_GOOGLE_CLIENT_ID: "${LOKYY_GOOGLE_CLIENT_ID:-}"
+  LOKYY_GOOGLE_CLIENT_SECRET: "${LOKYY_GOOGLE_CLIENT_SECRET:-}"
+  LOKYY_MCP_EXTRA_HOSTS: "${LOKYY_MCP_EXTRA_HOSTS:-lokyymail:8080}"
+  LOKYY_PROPOSAL_TTL_MINUTES: "${LOKYY_PROPOSAL_TTL_MINUTES:-15}"
+  LOKYY_AUDIT_RETENTION_DAYS: "${LOKYY_AUDIT_RETENTION_DAYS:-365}"
+  LOKYY_TIMEZONE: "${LOKYY_TIMEZONE:-Europe/Berlin}"
+  LOKYY_DEMO_MODE: "${LOKYY_DEMO_MODE:-0}"
+
+services:
+  lokyymail:
+    <<: *hardening
+    build: .
+    environment: *env
+    mem_limit: 512m
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  worker:
+    <<: *hardening
+    build: .
+    command: ["lokyymail", "worker"]
+    environment: *env
+    mem_limit: 256m
+    healthcheck:
+      disable: true
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: lokyy
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?POSTGRES_PASSWORD fehlt}"
+      POSTGRES_DB: lokyymail
+    volumes:
+      - lokyymail-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lokyy -d lokyymail"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 512m
+
+volumes:
+  lokyymail-db:

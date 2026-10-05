@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Anmelden · LokyyMail{% endblock %}
+{% block content %}
+<div class="auth">
+  <h1 class="brand-big">Lokyy<span>Mail</span></h1>
+  <p class="lead">Melde dich an, um Aktionen deiner KI freizugeben.</p>
+  {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+  <form method="post" action="/login" class="letter">
+    <input type="hidden" name="pre_csrf" value="{{ pre_csrf }}">
+    <div class="field"><label for="email">E-Mail</label><input id="email" name="email" type="email" autocomplete="username" required autofocus></div>
+    <div class="field"><label for="password">Passwort</label><input id="password" name="password" type="password" autocomplete="current-password" required></div>
+    <button class="primary" type="submit">Anmelden</button>
+  </form>
+</div>
+{% endblock %}

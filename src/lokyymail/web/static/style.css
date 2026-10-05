@@ -1,0 +1,240 @@
+/* LokyyMail – Freigabe-Webseite. Keine externen Schriften (DSGVO), kein JavaScript nötig. */
+
+:root {
+  --paper: #f3f5f8;
+  --sheet: #ffffff;
+  --ink: #17212e;
+  --muted: #5a6575;
+  --line: #d6dce4;
+  --post: #234fb8;
+  --go: #0b7a5c;
+  --stop: #b42318;
+  --warn: #8a5a00;
+  --warn-bg: #fff6e0;
+  --focus: #234fb8;
+  --radius: 10px;
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #10151c;
+    --sheet: #18202a;
+    --ink: #e6ebf1;
+    --muted: #9aa6b5;
+    --line: #2c3746;
+    --post: #7ea2ff;
+    --go: #3dc39a;
+    --stop: #ff7b6e;
+    --warn: #f2c14e;
+    --warn-bg: #2b2414;
+    --focus: #7ea2ff;
+  }
+}
+
+* { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font: 16px/1.55 var(--font);
+  font-variant-numeric: tabular-nums;
+}
+
+a { color: var(--post); text-underline-offset: 2px; }
+
+:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; border-radius: 4px; }
+
+/* ---------- Kopfleiste */
+
+.topbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 1.25rem;
+  padding: 0.75rem clamp(1rem, 4vw, 2.5rem);
+  border-bottom: 1px solid var(--line);
+  background: var(--sheet);
+}
+
+.brand { font-weight: 700; font-size: 1.1rem; letter-spacing: -0.01em; color: var(--ink); text-decoration: none; }
+.brand span { color: var(--post); }
+
+.nav { display: flex; flex-wrap: wrap; gap: 0.25rem 1rem; flex: 1; }
+.nav a { color: var(--muted); text-decoration: none; padding: 0.25rem 0; }
+.nav a:hover, .nav a[aria-current="page"] { color: var(--ink); text-decoration: underline; }
+
+.who { display: flex; align-items: center; gap: 0.75rem; color: var(--muted); font-size: 0.9rem; }
+
+/* ---------- Inhalt */
+
+main { max-width: 58rem; padding: 2rem clamp(1rem, 4vw, 2.5rem) 4rem; }
+
+h1 { font-size: 1.75rem; line-height: 1.2; margin: 0 0 0.5rem; letter-spacing: -0.015em; }
+h2 { font-size: 1.15rem; margin: 2.25rem 0 0.75rem; }
+p.lead { color: var(--muted); margin: 0 0 1.5rem; max-width: 42rem; }
+
+.muted { color: var(--muted); }
+.small { font-size: 0.875rem; }
+
+.flash, .error, .warning {
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius);
+  margin: 0 0 1.25rem;
+  border: 1px solid var(--line);
+  background: var(--sheet);
+}
+.error { border-color: var(--stop); color: var(--stop); }
+.warning { border-color: var(--warn); background: var(--warn-bg); color: var(--ink); }
+.warning strong { color: var(--warn); }
+
+/* ---------- Listen */
+
+.list { list-style: none; padding: 0; margin: 0; border-top: 1px solid var(--line); }
+.list li { border-bottom: 1px solid var(--line); }
+.list a.row, .list .row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.15rem 1rem;
+  padding: 0.85rem 0.25rem;
+  color: var(--ink);
+  text-decoration: none;
+}
+.list a.row:hover { background: var(--sheet); }
+.row .title { font-weight: 600; }
+.row .meta { color: var(--muted); font-size: 0.875rem; grid-column: 1; }
+.row .side { grid-row: 1 / span 2; grid-column: 2; align-self: center; text-align: right; }
+.row.unread .title::before { content: ""; display: inline-block; width: 0.5rem; height: 0.5rem; border-radius: 50%; background: var(--post); margin-right: 0.5rem; vertical-align: middle; }
+
+.empty { padding: 2rem 0; color: var(--muted); }
+
+/* ---------- Status-Stempel: Doppelrahmen wie ein Poststempel, Farbe trägt Bedeutung */
+
+.stamp {
+  display: inline-block;
+  padding: 0.1rem 0.55rem;
+  border: 3px double currentColor;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.stamp.pending { color: var(--post); }
+.stamp.executed { color: var(--go); }
+.stamp.rejected, .stamp.failed, .stamp.withdrawn { color: var(--stop); }
+.stamp.expired, .stamp.superseded { color: var(--muted); }
+.stamp.uncertain { color: var(--warn); }
+.risk-high { color: var(--stop); font-weight: 600; font-size: 0.85rem; }
+
+/* ---------- Der Briefbogen. Hohes Risiko = Luftpost-Rahmen ("verlässt das Haus"). */
+
+.letter {
+  background: var(--sheet);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: clamp(1rem, 3vw, 1.75rem);
+  margin: 1.25rem 0;
+}
+.letter.high {
+  border: 10px solid transparent;
+  background:
+    linear-gradient(var(--sheet), var(--sheet)) padding-box,
+    repeating-linear-gradient(135deg, var(--stop) 0 14px, var(--sheet) 14px 22px, var(--post) 22px 36px, var(--sheet) 36px 44px) border-box;
+}
+
+.envelope { display: grid; grid-template-columns: max-content 1fr; gap: 0.35rem 1rem; margin: 0 0 1.25rem; }
+.envelope dt { color: var(--muted); }
+.envelope dd { margin: 0; overflow-wrap: anywhere; }
+.envelope .external { color: var(--stop); font-weight: 600; }
+
+.body-text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font: 1rem/1.6 var(--font);
+  margin: 0;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--line);
+  max-width: 70ch;
+}
+
+.reasons { margin: 0 0 1.25rem; padding: 0.75rem 1rem; border-radius: 8px; background: var(--warn-bg); }
+.reasons ul { margin: 0.35rem 0 0; padding-left: 1.2rem; }
+
+.ai-note { border-left: 3px solid var(--line); padding: 0.25rem 0 0.25rem 0.85rem; color: var(--muted); margin: 1rem 0 0; }
+
+/* ---------- Entscheidung */
+
+.decide { display: flex; flex-wrap: wrap; align-items: end; gap: 0.75rem 1rem; margin-top: 1.5rem; }
+.decide form { margin: 0; }
+.code-field { display: flex; flex-direction: column; gap: 0.25rem; }
+.code-field input { width: 9.5rem; font: 600 1.35rem/1 var(--mono); letter-spacing: 0.25em; text-align: center; }
+
+/* ---------- Formulare */
+
+label { font-weight: 600; font-size: 0.95rem; }
+input[type=text], input[type=email], input[type=password], input[type=search], select, textarea {
+  font: inherit;
+  color: var(--ink);
+  background: var(--sheet);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0.6rem 0.75rem;
+  width: 100%;
+  max-width: 32rem;
+}
+textarea { min-height: 9rem; max-width: 42rem; resize: vertical; }
+.field { display: flex; flex-direction: column; gap: 0.3rem; margin: 0 0 1rem; }
+.inline { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: end; }
+
+button, .button {
+  font: 600 0.95rem/1 var(--font);
+  border-radius: 8px;
+  padding: 0.75rem 1.1rem;
+  border: 1px solid var(--line);
+  background: var(--sheet);
+  color: var(--ink);
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-block;
+}
+button.primary { background: var(--post); border-color: var(--post); color: #fff; }
+button.go { background: var(--go); border-color: var(--go); color: #fff; font-size: 1.05rem; padding: 0.85rem 1.35rem; }
+button.stop { color: var(--stop); border-color: var(--stop); background: transparent; }
+button.link { border: 0; background: none; padding: 0; color: var(--muted); text-decoration: underline; font-weight: 400; }
+
+.auth { max-width: 26rem; margin: 10vh auto; padding: 0 1rem; }
+.auth .letter { margin: 0; }
+.qr svg { width: 220px; height: 220px; background: #fff; padding: 8px; border-radius: 8px; }
+code.secret { font: 0.95rem var(--mono); overflow-wrap: anywhere; }
+
+table.plain { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+table.plain th, table.plain td { text-align: left; padding: 0.5rem 0.4rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+table.plain th { color: var(--muted); font-weight: 600; }
+.scroll { overflow-x: auto; }
+
+iframe.mailframe { width: 100%; min-height: 28rem; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
+
+details summary { cursor: pointer; color: var(--post); }
+
+.keybox { font: 0.95rem var(--mono); background: var(--paper); border: 1px dashed var(--line); padding: 0.75rem; border-radius: 8px; overflow-wrap: anywhere; user-select: all; }
+
+.nowrap { white-space: nowrap; }
+
+@media (max-width: 40rem) {
+  .topbar { justify-content: space-between; }
+  .nav { order: 3; flex-basis: 100%; gap: 0.25rem 0.9rem; }
+  .envelope { grid-template-columns: 1fr; }
+  .envelope dt { margin-top: 0.4rem; }
+  .letter.high { border-width: 7px; }
+}
+
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+
+.brand-big span { color: var(--post); }
+.spaced { margin-top: 1rem; }
+.code-small { width: 6.5rem !important; font-family: var(--mono); text-align: center; }
+.tight { margin: 0.35rem 0; padding-left: 1.2rem; }

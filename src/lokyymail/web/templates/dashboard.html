@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% set status_names = {'pending':'Offen','executed':'Ausgeführt','rejected':'Abgelehnt','expired':'Abgelaufen','failed':'Fehlgeschlagen','uncertain':'Unklar','superseded':'Überholt','withdrawn':'Zurückgezogen','executing':'Läuft'} %}
+{% block content %}
+<h1>{% if pending %}{{ pending | length }} {{ 'Antrag wartet' if pending | length == 1 else 'Anträge warten' }} auf dich{% else %}Nichts zu entscheiden{% endif %}</h1>
+<p class="lead">{% if pending %}Deine KI hat Aktionen vorgeschlagen. Nichts davon passiert, bevor du es freigibst.{% else %}Sobald deine KI eine Aktion vorschlägt, erscheint sie hier.{% endif %}</p>
+{% if pending %}
+<ul class="list">{% for p in pending %}{% include "_proposal_row.html" %}{% endfor %}</ul>
+{% endif %}
+
+<h2>Postfächer</h2>
+{% if boxes %}
+<ul class="list">
+{% for m, a in boxes %}
+  <li><a class="row" href="/mailboxes/{{ m.id }}"><span class="title">{{ m.address }}</span><span class="meta">{{ 'KI darf lesen' if m.ai_enabled else 'KI hat keinen Zugriff' }}{% if m.status != 'active' %} · getrennt{% endif %}</span></a></li>
+{% endfor %}
+</ul>
+{% else %}
+<p class="empty">Noch kein Postfach verbunden. <a href="/mailboxes">Postfach verbinden</a></p>
+{% endif %}
+{% endblock %}

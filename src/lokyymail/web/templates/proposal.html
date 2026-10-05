@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% set status_names = {'pending':'Offen','executed':'Ausgeführt','rejected':'Abgelehnt','expired':'Abgelaufen','failed':'Fehlgeschlagen','uncertain':'Unklar – bitte prüfen','superseded':'Überholt','withdrawn':'Zurückgezogen','executing':'Läuft'} %}
+{% set go_labels = {'send':'Freigeben und senden','reply':'Freigeben und senden','forward':'Freigeben und weiterleiten','archive':'Freigeben und archivieren','trash':'Freigeben: in den Papierkorb','mark_read':'Freigeben: als gelesen markieren','mark_unread':'Freigeben: als ungelesen markieren','labels':'Freigeben: Labels ändern','batch':'Sammelaktion freigeben'} %}
+{% set pv = p.preview %}
+{% block title %}{{ p.action_label }} · LokyyMail{% endblock %}
+{% block content %}
+<p class="small"><a href="/proposals">Alle Freigaben</a></p>
+<h1>{{ p.action_label }}{% if pv.to %} an {{ pv.to | join(', ') }}{% endif %}</h1>
+<p class="lead">
+  <span class="stamp {{ p.status }}">{{ status_names[p.status] }}</span>
+  &nbsp;Aus {{ pv.mailbox }}, beantragt {{ p.created_at | local }}{% if p.requested_via == 'ai' %} von der KI{% elif p.requested_via == 'web' %} über die Webseite{% else %} über Hermes{% endif %}.
+  {% if p.status == 'pending' %}<span class="nowrap">Läuft ab {{ p.expires_at | local }}.</span>{% endif %}
+</p>
+
+{% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+{% if p.error %}<p class="warning"><strong>Hinweis:</strong> {{ p.error }}</p>{% endif %}
+{% if p.status == 'executed' %}<p class="flash">Erledigt. Die Aktion wurde ausgeführt und nachgeprüft.</p>{% endif %}
+
+{% if pv.scrubbed %}
+<div class="letter">
+  <p class="muted">Die Inhalte dieses Antrags wurden nach Abschluss gelöscht (Datensparsamkeit). Es bleiben nur Art, Postfach und Zeitpunkte im Protokoll.</p>
+</div>
+{% else %}
+<article class="letter {{ 'high' if p.risk_level == 'high' }}" aria-label="Vorschau der Aktion">
+  {% if p.risk_reasons %}
+  <div class="reasons" role="note"><strong>Hohes Risiko – bitte genau prüfen:</strong>
+    <ul>{% for r in p.risk_reasons %}<li>{{ r }}</li>{% endfor %}</ul>
+  </div>
+  {% endif %}
+
+  {% if pv.to is defined %}
+  <dl class="envelope">
+    <dt>Von</dt><dd>{{ pv.mailbox }}</dd>
+    <dt>An</dt><dd>{% for a in pv.to %}<span class="{{ 'external' if a in external }}">{{ a }}</span>{% if not loop.last %}, {% endif %}{% endfor %}</dd>
+    {% if pv.cc %}<dt>Cc</dt><dd>{% for a in pv.cc %}<span class="{{ 'external' if a in external }}">{{ a }}</span>{% if not loop.last %}, {% endif %}{% endfor %}</dd>{% endif %}
+    <dt>Betreff</dt><dd>{{ pv.subject }}</dd>
+    {% if pv.attachments %}<dt>Anhänge</dt><dd>{% for a in pv.attachments %}{{ a.name }}{% if not loop.last %}, {% endif %}{% endfor %}</dd>{% endif %}
+    {% if pv.original %}<dt>Bezug</dt><dd>{{ pv.original.subject }} <span class="muted">von {{ pv.original['from'] }}</span></dd>{% endif %}
+  </dl>
+  {% if external %}<p class="small muted">Rot markierte Adressen liegen außerhalb deiner Firma.</p>{% endif %}
+  <pre class="body-text">{{ pv.body if pv.body else '(kein Text)' }}</pre>
+
+  {% elif pv.messages %}
+  <p><strong>{{ pv.operation }}</strong> für {{ pv.messages | length }} Mails:</p>
+  <ul class="list">{% for m in pv.messages %}<li><div class="row"><span class="title">{{ m.subject or '(ohne Betreff)' }}</span><span class="meta">{{ m['from'] }}</span></div></li>{% endfor %}</ul>
+
+  {% elif pv.original %}
+  <dl class="envelope">
+    <dt>Mail</dt><dd>{{ pv.original.subject or '(ohne Betreff)' }}</dd>
+    <dt>Von</dt><dd>{{ pv.original['from'] }}</dd>
+    {% if pv.add %}<dt>Label dazu</dt><dd>{{ pv.add | join(', ') }}</dd>{% endif %}
+    {% if pv.remove %}<dt>Label weg</dt><dd>{{ pv.remove | join(', ') }}</dd>{% endif %}
+  </dl>
+  {% endif %}
+
+  {% if p.note %}<p class="ai-note"><span class="small">Begründung der KI (nicht überprüft):</span><br>{{ p.note }}</p>{% endif %}
+</article>
+{% endif %}
+
+{% if p.status == 'pending' and can_approve %}
+<div class="decide">
+  <form method="post" action="/proposals/{{ p.id }}/approve" class="inline">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    {% if p.risk_level == 'high' %}
+    <div class="code-field"><label for="code">Code aus der App</label><input type="text" id="code" name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="7" required></div>
+    {% endif %}
+    <button class="go" type="submit">{{ go_labels[p.action] }}</button>
+  </form>
+  <form method="post" action="/proposals/{{ p.id }}/reject">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <button class="stop" type="submit">Ablehnen</button>
+  </form>
+</div>
+{% elif p.status == 'pending' %}
+<p class="muted">Du kannst diesen Antrag sehen, aber nicht freigeben.</p>
+{% endif %}
+{% endblock %}

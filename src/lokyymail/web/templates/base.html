@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>{% block title %}LokyyMail{% endblock %}</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+{% if user and not hide_nav %}
+<header class="topbar">
+  <a class="brand" href="/">Lokyy<span>Mail</span></a>
+  <nav class="nav" aria-label="Hauptnavigation">
+    <a href="/proposals" {% if request.url.path.startswith('/proposals') %}aria-current="page"{% endif %}>Freigaben</a>
+    <a href="/mailboxes" {% if request.url.path.startswith('/mailboxes') %}aria-current="page"{% endif %}>Postfächer</a>
+    <a href="/keys" {% if request.url.path.startswith('/keys') %}aria-current="page"{% endif %}>Zugänge</a>
+    {% if user.is_admin %}
+    <a href="/users" {% if request.url.path.startswith('/users') %}aria-current="page"{% endif %}>Nutzer</a>
+    <a href="/audit" {% if request.url.path.startswith('/audit') %}aria-current="page"{% endif %}>Protokoll</a>
+    {% endif %}
+  </nav>
+  <div class="who">
+    <a href="/account">{{ user.display_name or user.email }}</a>
+    <form method="post" action="/logout"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="link" type="submit">Abmelden</button></form>
+  </div>
+</header>
+{% endif %}
+<main>
+{% block content %}{% endblock %}
+</main>
+</body>
+</html>
