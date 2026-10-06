@@ -48,7 +48,9 @@ def test_reply_to_external_is_high_risk_and_needs_code(app_env, world):
     assert _approve(app_env, world, pid, code=code) == "executed"
 
 
-def test_device_always_needs_code(app_env, world):
+def test_device_always_needs_code(app_env, world, monkeypatch):
+    from lokyymail.config import get_settings
+    monkeypatch.setattr(get_settings(), "hermes_approvals", True)
     pid = _create(app_env, world, "mark_read", {"message_id": "m1"})
     with pytest.raises(P.ProposalError) as err:
         _approve(app_env, world, pid, via="device")

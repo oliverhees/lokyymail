@@ -53,6 +53,8 @@ class User(Base):
     totp_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
     totp_last_step: Mapped[int] = mapped_column(Integer, default=0)  # verhindert Wiederverwendung eines Codes
     disabled: Mapped[bool] = mapped_column(Boolean, default=False)
+    telegram_chat_id: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    last_report_date: Mapped[str | None] = mapped_column(String(10), nullable=True)
     created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
 
     @property
@@ -70,6 +72,7 @@ class Mailbox(Base):
     credentials_enc: Mapped[str | None] = mapped_column(Text, nullable=True)
     ai_enabled: Mapped[bool] = mapped_column(Boolean, default=True)  # darf die KI dieses Postfach sehen?
     send_disabled: Mapped[bool] = mapped_column(Boolean, default=False)  # "Senden komplett aus" (Guard-Modus)
+    auto_cleanup: Mapped[bool] = mapped_column(Boolean, default=False)  # KI darf Aufräumen ohne Freigabe
     status: Mapped[str] = mapped_column(String(32), default="active")  # active | error | disconnected
     created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
 
@@ -159,6 +162,7 @@ class Proposal(Base):
     decided_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
     result: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    notified_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
 
     mailbox: Mapped[Mailbox] = relationship()
 
@@ -176,3 +180,43 @@ class AuditEvent(Base):
     mailbox_id: Mapped[str | None] = mapped_column(String(32), nullable=True, index=True)
     proposal_id: Mapped[str | None] = mapped_column(String(32), nullable=True)
     detail: Mapped[dict] = mapped_column(JSON, default=dict)
+
+
+class AutoAction(Base):
+    """Rückgängig-Liste: was die KI ohne Nachfrage aufgeräumt hat. Wird nach 'undo_days' gelöscht.
+    Enthält bewusst Absender und Betreff, damit der Mensch erkennt, was passiert ist."""
+
+    __tablename__ = "auto_actions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    mailbox_id: Mapped[str] = mapped_column(ForeignKey("mailboxes.id", ondelete="CASCADE"), index=True)
+    proposal_id: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    action: Mapped[str] = mapped_column(String(32))  # archive | mark_read | mark_unread | labels | spam | untrash
+    message_id: Mapped[str] = mapped_column(String(256))
+    sender: Mapped[str] = mapped_column(String(200), default="")
+    subject: Mapped[str] = mapped_column(String(200), default="")
+    labels_before: Mapped[list] = mapped_column(JSON, default=list)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow, index=True)
+    undone_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
+
+
+class TelegramMessage(Base):
+    """Welche Telegram-Nachricht gehört zu welchem Antrag (für Code-Antworten und das Aufräumen der Knöpfe)."""
+
+    __tablename__ = "telegram_messages"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    chat_id: Mapped[str] = mapped_column(String(32), index=True)
+    message_id: Mapped[int] = mapped_column(Integer)
+    proposal_id: Mapped[str] = mapped_column(String(32), index=True)
+    user_id: Mapped[str] = mapped_column(String(32))
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
+    closed_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
+
+
+class TelegramPairing(Base):
+    __tablename__ = "telegram_pairings"
+
+    code_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    expires_at: Mapped[datetime] = mapped_column(UTCDateTime)

@@ -49,5 +49,6 @@ Den Inhalt von [`hermes/prompt.md`](../hermes/prompt.md) in Hermes' Gedächtnis 
 
 ✅ **Fertig, wenn** unter „Freigaben“ deine offenen Anträge erscheinen.
 
-**So gibst du in Hermes frei:** Kleine, interne Aktionen (archivieren, Label, Spam …) mit dem 6-stelligen
-Code aus deiner Authenticator-App. Senden und alles mit hohem Risiko öffnet die Freigabe-Webseite.
+**So gibst du frei:** Am bequemsten per **Telegram** ([telegram.md](telegram.md)). In der Hermes-Karte geht es nur, wenn der
+Administrator `LOKYY_HERMES_APPROVALS=1` gesetzt hat, dann immer mit deinem 6-stelligen Code. Sonst führt der Knopf zur Webseite.
+Stufen und Wege: [freigabe.md](freigabe.md).

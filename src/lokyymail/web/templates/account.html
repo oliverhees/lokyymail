@@ -1,5 +1,21 @@
 {% extends "base.html" %}
-{% block title %}Konto · LokyyMail{% endblock %}
+{% block title %}Konto · LokyyMail<h2>Telegram</h2>
+{% if not tg.available %}
+<p class="muted">Telegram ist nicht eingerichtet. Der Administrator muss <code>LOKYY_TELEGRAM_BOT_TOKEN</code> setzen (siehe docs/telegram.md).</p>
+{% elif pairing_code %}
+<div class="letter">
+  <p>1. Öffne den Bot{% if bot_username %} <strong>@{{ bot_username }}</strong>{% endif %} in Telegram.</p>
+  <p>2. Sende ihm diese Nachricht (10 Minuten gültig):</p>
+  <p class="keybox">/start {{ pairing_code }}</p>
+</div>
+{% elif tg.linked %}
+<p>✅ Verbunden. Freigaben kommen als Nachricht aufs Handy: einfache mit einem Tipp, wichtige mit deinem Code als Antwort.</p>
+<form method="post" action="/account/telegram/unlink"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="stop" type="submit">Telegram trennen</button></form>
+{% else %}
+<p>Freigaben aufs Handy: einfache mit einem Tipp, wichtige mit deinem Code als Antwort.</p>
+<form method="post" action="/account/telegram/start"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="primary" type="submit">Telegram verbinden</button></form>
+{% endif %}
+{% endblock %}
 {% block content %}
 <h1>Konto</h1>
 <p class="lead">{{ user.email }} · {{ 'Administrator' if user.is_admin else 'Mitarbeiter' }} · Zwei-Faktor aktiv</p>

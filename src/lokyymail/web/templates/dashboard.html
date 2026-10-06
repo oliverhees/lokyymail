@@ -7,6 +7,8 @@
 <ul class="list">{% for p in pending %}{% include "_proposal_row.html" %}{% endfor %}</ul>
 {% endif %}
 
+{% if cleaned %}<p class="flash">🧹 Heute hat die KI {{ cleaned }} {{ 'Mail' if cleaned == 1 else 'Mails' }} aufgeräumt. <a href="/cleanup">Ansehen und rückgängig machen</a></p>{% endif %}
+
 <h2>Postfächer</h2>
 {% if boxes %}
 <ul class="list">

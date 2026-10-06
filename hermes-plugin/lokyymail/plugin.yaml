@@ -1,5 +1,5 @@
 name: lokyymail
-version: 0.3.0
+version: 0.4.0
 description: LokyyMail – Postfach und Freigaben in Hermes Desktop. Die KI schlägt vor, du gibst frei.
 manifest_version: 1
 kind: standalone

@@ -12,13 +12,17 @@
   <li>
     <div class="row">
       <span class="title"><a href="/mailboxes/{{ m.id }}">{{ m.address }}</a></span>
-      <span class="meta">{{ {'gmail':'Google Workspace','demo':'Demo'}.get(m.provider, m.provider) }} · {{ {'owner':'Inhaber','approver':'Freigeber','reader':'Lesen'}[a.role] }}{% if m.send_disabled %} · <strong>Senden komplett aus</strong>{% endif %}{% if m.status != 'active' %} · getrennt{% endif %}</span>
+      <span class="meta">{{ {'gmail':'Google Workspace','demo':'Demo'}.get(m.provider, m.provider) }} · {{ {'owner':'Inhaber','approver':'Freigeber','reader':'Lesen'}[a.role] }}{% if m.send_disabled %} · <strong>Senden komplett aus</strong>{% endif %}{% if m.auto_cleanup %} · Aufräumen automatisch{% endif %}{% if m.status != 'active' %} · getrennt{% endif %}</span>
       <span class="side inline">
         {% if a.role == 'owner' or user.is_admin %}
         <form method="post" action="/mailboxes/{{ m.id }}/ai">
           <input type="hidden" name="csrf" value="{{ csrf }}">
           <input type="hidden" name="enabled" value="{{ '0' if m.ai_enabled else '1' }}">
           <button type="submit">{{ 'KI-Zugriff sperren' if m.ai_enabled else 'KI-Zugriff erlauben' }}</button>
+        </form>
+        <form method="post" action="/mailboxes/{{ m.id }}/cleanup">
+          <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="enabled" value="{{ '0' if m.auto_cleanup else '1' }}">
+          <button type="submit">{{ 'Aufräumen wieder mit Freigabe' if m.auto_cleanup else 'Aufräumen automatisch erlauben' }}</button>
         </form>
         {% if m.send_disabled %}
         <form method="post" action="/mailboxes/{{ m.id }}/sending" class="inline">

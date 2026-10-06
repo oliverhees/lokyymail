@@ -10,5 +10,5 @@ psycopg (LGPL-3.0), pydantic (MIT), jinja2 (BSD-3), argon2-cffi (MIT), pyotp (MI
 cryptography (Apache-2.0/BSD), nh3 (MIT), mcp (MIT), google-api-python-client (Apache-2.0),
 google-auth (Apache-2.0), requests (Apache-2.0), pypdf (BSD-3), python-docx (MIT).
 
-„Hermes“ ist ein Open-Source-Projekt von Nous Research. „Gmail“ und „Google Workspace“ sind Marken
+„Hermes“ ist ein Open-Source-Projekt von Nous Research. „Telegram“, „Gmail“ und „Google Workspace“ sind Marken
 der Google LLC. LokyyMail steht in keiner offiziellen Verbindung zu Nous Research oder Google.

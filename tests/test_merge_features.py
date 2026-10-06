@@ -78,21 +78,20 @@ def test_web_toggle_send_disabled(client, app_env, world):
 
 # ------------------------------------------------------------------ Hermes: was das Haus verlässt, nur über die Webseite
 
-def test_device_cannot_approve_sending_or_high_risk(app_env, world, monkeypatch):
-    code = fresh_code(app_env, world["user"], world["secret"])
-    internal = _create(app_env, world, "send", {"to": ["kollege@lokyy-demo.de"], "subject": "x", "body": "y"})
-    with pytest.raises(P.ProposalError) as err:
-        _approve(app_env, world, internal, via="device", code=code)
-    assert err.value.code == "web_only"
+def test_device_approval_is_off_by_default_and_needs_code_when_on(app_env, world, monkeypatch):
     from lokyymail.config import get_settings
-    monkeypatch.setattr(get_settings(), "high_risk_batch_threshold", 2)
-    risky = _create(app_env, world, "batch", {"operation": "trash", "message_ids": ["m1", "m2", "m3"]})
+    code = fresh_code(app_env, world["user"], world["secret"])
+    pid = _create(app_env, world, "send", {"to": ["kollege@lokyy-demo.de"], "subject": "x", "body": "y"})
     with pytest.raises(P.ProposalError) as err:
-        _approve(app_env, world, risky, via="device", code=fresh_code(app_env, world["user"], world["secret"]))
-    assert err.value.code == "web_only"
-    # Kleines, internes Aufräumen geht in Hermes
-    low = _create(app_env, world, "mark_read", {"message_id": "m1"})
-    assert _approve(app_env, world, low, via="device", code=fresh_code(app_env, world["user"], world["secret"])) == "executed"
+        _approve(app_env, world, pid, via="device", code=code)
+    assert err.value.code == "hermes_disabled"
+    monkeypatch.setattr(get_settings(), "hermes_approvals", True)
+    with pytest.raises(P.ProposalError) as err:
+        _approve(app_env, world, pid, via="device")
+    assert err.value.code == "code_required"
+    assert _approve(app_env, world, pid, via="device", code=fresh_code(app_env, world["user"], world["secret"])) == "executed"
+    risky = _create(app_env, world, "reply", {"message_id": "m1", "body": "ok"})
+    assert _approve(app_env, world, risky, via="device", code=fresh_code(app_env, world["user"], world["secret"])) == "executed"
 
 
 # ------------------------------------------------------------------ Anhänge

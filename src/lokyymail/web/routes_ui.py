@@ -19,7 +19,11 @@ from ..config import get_settings
 from ..db import get_db
 from ..mail_service import MailError, message_for_human, search
 from ..models import ApiKey, AuditEvent, Mailbox, MailboxAccess, OAuthState, User, WebSession, utcnow
-from ..proposals import ACTION_LABELS, ProposalError, approve, create_proposal, get_visible, public_view, reject, visible_proposals
+from ..proposals import (
+    ACTION_LABELS, ProposalError, approve, create_proposal, get_visible, list_auto_actions, public_view, reject, undo_auto,
+    visible_proposals,
+)
+from .. import telegram as tg
 from ..providers import credentials_context
 from ..providers.base import ProviderError
 from ..security import (
@@ -56,7 +60,11 @@ router = APIRouter()
 
 
 def render(request: Request, name: str, ctx: WebContext | None = None, status: int = 200, **data: Any) -> HTMLResponse:
-    base = {"user": ctx.user if ctx else None, "csrf": ctx.csrf if ctx else "", "labels": ACTION_LABELS, "demo": get_settings().demo_mode}
+    settings = get_settings()
+    base = {
+        "user": ctx.user if ctx else None, "csrf": ctx.csrf if ctx else "", "labels": ACTION_LABELS, "demo": settings.demo_mode,
+        "tg": {"available": bool(settings.telegram_bot_token), "linked": bool(ctx and ctx.user.telegram_chat_id)},
+    }
     return templates.TemplateResponse(request, name, {**base, **data}, status_code=status)
 
 
@@ -180,7 +188,8 @@ def logout(request: Request, csrf: str = Form(""), db: Session = Depends(get_db)
 def dashboard(request: Request, ctx: WebContext = Depends(web_user), db: Session = Depends(get_db)):
     pending = [public_view(p) for p in visible_proposals(db, ctx.user, status="pending")]
     boxes = accessible_mailboxes(db, ctx.user)
-    return render(request, "dashboard.html", ctx, pending=pending, boxes=boxes)
+    cleaned = len([e for e, _ in list_auto_actions(db, ctx.user, days=1) if e.undone_at is None])
+    return render(request, "dashboard.html", ctx, pending=pending, boxes=boxes, cleaned=cleaned)
 
 
 @router.get("/proposals", response_class=HTMLResponse)
@@ -323,6 +332,41 @@ def toggle_ai(request: Request, mailbox_id: str, enabled: str = Form("0"), csrf:
     return redirect("/mailboxes")
 
 
+@router.post("/mailboxes/{mailbox_id}/cleanup")
+def toggle_cleanup(request: Request, mailbox_id: str, enabled: str = Form("0"), csrf: str = Form(""), ctx: WebContext = Depends(web_user), db: Session = Depends(get_db)):
+    """'Aufräumen automatisch': Die KI darf Rückgängig-machbares ohne Freigabe tun (Stundenlimit, Bericht, Rückgängig)."""
+    check_csrf(ctx, csrf)
+    try:
+        mailbox, access = require_mailbox(db, ctx.user, mailbox_id)
+    except AccessDenied as exc:
+        raise HTTPException(403, str(exc)) from exc
+    if access.role != "owner" and not ctx.user.is_admin:
+        raise HTTPException(403, "Nur Inhaber dürfen das ändern.")
+    mailbox.auto_cleanup = enabled == "1"
+    audit.log(db, "mailbox.cleanup_enabled" if mailbox.auto_cleanup else "mailbox.cleanup_disabled", actor_type="user", actor_id=ctx.user.id, mailbox_id=mailbox.id)
+    return redirect("/mailboxes?info=" + ("Aufräumen+läuft+jetzt+automatisch.+Alles+steht+unter+%E2%80%9EAufgeräumt%E2%80%9C+und+lässt+sich+zurückholen." if mailbox.auto_cleanup else "Aufräumen+braucht+wieder+Freigabe."))
+
+
+@router.get("/cleanup", response_class=HTMLResponse)
+def cleanup_report(request: Request, ctx: WebContext = Depends(web_user), db: Session = Depends(get_db)):
+    days = get_settings().undo_days
+    return render(request, "cleanup.html", ctx, items=list_auto_actions(db, ctx.user, days=days), days=days,
+                  info=request.query_params.get("info"), error=request.query_params.get("fehler"))
+
+
+@router.post("/cleanup/{entry_id}/undo")
+def cleanup_undo(request: Request, entry_id: int, csrf: str = Form(""), ctx: WebContext = Depends(web_user), db: Session = Depends(get_db)):
+    check_csrf(ctx, csrf)
+    try:
+        undo_auto(db, entry_id=entry_id, user=ctx.user)
+    except ProposalError as exc:
+        db.commit()
+        from urllib.parse import quote
+
+        return redirect("/cleanup?fehler=" + quote(str(exc)))
+    return redirect("/cleanup?info=Zurückgeholt.")
+
+
 @router.post("/mailboxes/{mailbox_id}/sending")
 def toggle_sending(request: Request, mailbox_id: str, enabled: str = Form("0"), code: str = Form(""), csrf: str = Form(""), ctx: WebContext = Depends(web_user), db: Session = Depends(get_db)):
     """'Senden komplett aus' umschalten. Wieder einschalten braucht einen frischen Zwei-Faktor-Code."""
@@ -372,7 +416,7 @@ def disconnect(request: Request, mailbox_id: str, csrf: str = Form(""), ctx: Web
 
 
 @router.get("/mailboxes/{mailbox_id}", response_class=HTMLResponse)
-def inbox(request: Request, mailbox_id: str, q: str = "", ctx: WebContext = Depends(web_user), db: Session = Depends(get_db)):
+def inbox(request: Request, mailbox_id: str, q: str = "", info: str = "", fehler: str = "", ctx: WebContext = Depends(web_user), db: Session = Depends(get_db)):
     try:
         mailbox, _ = require_mailbox(db, ctx.user, mailbox_id)
         result = search(db, ctx.user, mailbox_id, q or "in:inbox", 25, None, for_ai=False, actor=ctx.user.id)
@@ -380,7 +424,7 @@ def inbox(request: Request, mailbox_id: str, q: str = "", ctx: WebContext = Depe
         raise HTTPException(403, str(exc)) from exc
     except MailError as exc:
         return render(request, "inbox.html", ctx, mailbox=mailbox if 'mailbox' in locals() else None, messages=[], q=q, error=str(exc), status=exc.status)
-    return render(request, "inbox.html", ctx, mailbox=mailbox, messages=result["messages"], q=q)
+    return render(request, "inbox.html", ctx, mailbox=mailbox, messages=result["messages"], q=q, info=info, error=fehler or None)
 
 
 @router.get("/mailboxes/{mailbox_id}/messages/{message_id}", response_class=HTMLResponse)
@@ -414,6 +458,12 @@ def propose_from_web(
         p = create_proposal(db, user=ctx.user, mailbox_id=mailbox_id, action=action, params=params, via="web")
     except ProposalError as exc:
         raise HTTPException(exc.status, str(exc)) from exc
+    if p.status != "pending":  # Aufräumen läuft sofort: dein Klick war die Freigabe
+        from urllib.parse import quote
+
+        if p.status == "executed":
+            return redirect(f"/mailboxes/{mailbox_id}?info={quote('Erledigt.')}")
+        return redirect(f"/mailboxes/{mailbox_id}?fehler={quote(p.error or 'Nicht ausgeführt.')}")
     return redirect(f"/proposals/{p.id}")
 
 
@@ -455,6 +505,28 @@ def key_revoke(request: Request, key_id: str, csrf: str = Form(""), ctx: WebCont
 @router.get("/account", response_class=HTMLResponse)
 def account(request: Request, ctx: WebContext = Depends(web_user)):
     return render(request, "account.html", ctx, info=request.query_params.get("info"))
+
+
+@router.post("/account/telegram/start", response_class=HTMLResponse)
+def telegram_start(request: Request, csrf: str = Form(""), ctx: WebContext = Depends(web_user), db: Session = Depends(get_db)):
+    check_csrf(ctx, csrf)
+    api = tg.get_api()
+    if api is None:
+        raise HTTPException(400, "Telegram ist nicht eingerichtet (LOKYY_TELEGRAM_BOT_TOKEN fehlt).")
+    username = ""
+    try:
+        username = (api.call("getMe") or {}).get("username", "")
+    except tg.TelegramError:
+        pass
+    code = tg.create_pairing(db, ctx.user)
+    return render(request, "account.html", ctx, pairing_code=code, bot_username=username)
+
+
+@router.post("/account/telegram/unlink")
+def telegram_unlink(request: Request, csrf: str = Form(""), ctx: WebContext = Depends(web_user), db: Session = Depends(get_db)):
+    check_csrf(ctx, csrf)
+    tg.unlink(db, ctx.user)
+    return redirect("/account?info=Telegram+getrennt.")
 
 
 @router.post("/account/password", response_class=HTMLResponse)

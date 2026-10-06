@@ -52,6 +52,38 @@ def create_all() -> None:
     from . import models  # noqa: F401  (Modelle registrieren)
 
     Base.metadata.create_all(get_engine())
+    migrate()
+
+
+# Neue Spalten in bereits bestehenden Tabellen (create_all ergänzt nur fehlende Tabellen).
+_NEW_COLUMNS = [
+    # (Tabelle, Spalte, PostgreSQL-Typ, SQLite-Typ)
+    ("mailboxes", "send_disabled", "BOOLEAN NOT NULL DEFAULT false", "BOOLEAN NOT NULL DEFAULT 0"),
+    ("mailboxes", "auto_cleanup", "BOOLEAN NOT NULL DEFAULT false", "BOOLEAN NOT NULL DEFAULT 0"),
+    ("users", "telegram_chat_id", "VARCHAR(32)", "VARCHAR(32)"),
+    ("users", "last_report_date", "VARCHAR(10)", "VARCHAR(10)"),
+    ("proposals", "notified_at", "TIMESTAMP WITH TIME ZONE", "DATETIME"),
+]
+
+
+def migrate() -> list[str]:
+    """Ergänzt fehlende Spalten, damit ein Update keine Daten kostet. Gibt die ergänzten Spalten zurück."""
+    from sqlalchemy import inspect, text
+
+    engine = get_engine()
+    inspector = inspect(engine)
+    sqlite = engine.dialect.name == "sqlite"
+    tables = set(inspector.get_table_names())
+    added: list[str] = []
+    with engine.begin() as conn:
+        for table, column, pg_type, sqlite_type in _NEW_COLUMNS:
+            if table not in tables:
+                continue
+            if column in {c["name"] for c in inspector.get_columns(table)}:
+                continue
+            conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {column} {sqlite_type if sqlite else pg_type}"))
+            added.append(f"{table}.{column}")
+    return added
 
 
 @contextmanager

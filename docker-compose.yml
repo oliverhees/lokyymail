@@ -26,6 +26,11 @@ x-env: &env
   LOKYY_AUDIT_RETENTION_DAYS: "${LOKYY_AUDIT_RETENTION_DAYS:-365}"
   LOKYY_TIMEZONE: "${LOKYY_TIMEZONE:-Europe/Berlin}"
   LOKYY_DEMO_MODE: "${LOKYY_DEMO_MODE:-0}"
+  LOKYY_TELEGRAM_BOT_TOKEN: "${LOKYY_TELEGRAM_BOT_TOKEN:-}"
+  LOKYY_HERMES_APPROVALS: "${LOKYY_HERMES_APPROVALS:-0}"
+  LOKYY_AUTO_CLEANUP_PER_HOUR: "${LOKYY_AUTO_CLEANUP_PER_HOUR:-60}"
+  LOKYY_UNDO_DAYS: "${LOKYY_UNDO_DAYS:-7}"
+  LOKYY_DAILY_REPORT_HOUR: "${LOKYY_DAILY_REPORT_HOUR:-18}"
 
 services:
   lokyymail:
@@ -48,6 +53,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      lokyymail:
+        condition: service_healthy  # Webserver legt zuerst die Tabellen an
 
   postgres:
     image: postgres:16-alpine

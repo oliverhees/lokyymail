@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% set names = {'archive':'archiviert','mark_read':'als gelesen markiert','mark_unread':'als ungelesen markiert','labels':'Labels geändert','spam':'als Spam markiert','untrash':'wiederhergestellt'} %}
+{% block title %}Aufgeräumt · LokyyMail{% endblock %}
+{% block content %}
+<h1>Aufgeräumt</h1>
+<p class="lead">Das hat die KI ohne Nachfrage erledigt (letzte {{ days }} Tage). Alles lässt sich mit einem Klick zurückholen. Danach wird die Liste gelöscht.</p>
+{% if info %}<p class="flash">{{ info }}</p>{% endif %}
+{% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+{% if items %}
+<div class="scroll"><table class="plain">
+  <thead><tr><th>Zeit</th><th>Was</th><th>Absender</th><th>Betreff</th><th>Postfach</th><th></th></tr></thead>
+  <tbody>
+  {% for e, m in items %}
+  <tr>
+    <td>{{ e.created_at | local }}</td><td>{{ names.get(e.action, e.action) }}</td><td>{{ e.sender }}</td><td>{{ e.subject or '(ohne Betreff)' }}</td><td class="small">{{ m.address }}</td>
+    <td>{% if e.undone_at %}<span class="muted">zurückgeholt</span>{% else %}
+      <form method="post" action="/cleanup/{{ e.id }}/undo"><input type="hidden" name="csrf" value="{{ csrf }}"><button type="submit">Rückgängig</button></form>{% endif %}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table></div>
+{% else %}
+<p class="empty">In den letzten {{ days }} Tagen wurde nichts automatisch aufgeräumt.</p>
+{% endif %}
+{% endblock %}

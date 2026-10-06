@@ -3,6 +3,7 @@
 {% block content %}
 <p class="small"><a href="/mailboxes">Postfächer</a></p>
 <h1>{{ mailbox.address if mailbox else 'Postfach' }}</h1>
+{% if info %}<p class="flash">{{ info }}</p>{% endif %}
 <form method="get" class="inline spaced" role="search">
   <input type="search" name="q" value="{{ q }}" placeholder="Suchen, z. B. is:unread oder from:anna@firma.de" aria-label="Suche">
   <button type="submit">Suchen</button>

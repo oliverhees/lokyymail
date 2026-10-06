@@ -14,6 +14,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
+from ..config import get_settings
 from ..db import get_db
 from ..mail_service import MailError, list_mailboxes, message_for_human, search
 from ..proposals import ProposalError, approve, create_proposal, get_visible, public_view, reject, visible_proposals
@@ -33,6 +34,7 @@ def status(k: KeyContext = Depends(device_key), db: Session = Depends(get_db)) -
         "user": {"email": k.user.email, "name": k.user.display_name or k.user.email, "two_factor": k.user.totp_enabled},
         "mailboxes": list_mailboxes(db, k.user, for_ai=False),
         "pending": len(visible_proposals(db, k.user, status="pending")),
+        "approvals": {"hermes": get_settings().hermes_approvals},
     }
 
 

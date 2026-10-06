@@ -71,17 +71,22 @@ def test_security_headers(client):
 
 def test_full_web_approval(client, app_env, world):
     csrf = _login(client, app_env, world)
-    r = client.post(f"/mailboxes/{world['mailbox']}/messages/m3/propose", data={"action": "archive", "csrf": csrf})
+    # Interne Antwort = Stufe "normal": Vorschau, ein Klick, kein Code
+    r = client.post(f"/mailboxes/{world['mailbox']}/messages/m3/propose", data={"action": "reply", "body": "Bestätigt.", "csrf": csrf})
     assert r.status_code == 303
     pid = r.headers["location"].rsplit("/", 1)[1]
     page = client.get(f"/proposals/{pid}")
-    assert "Freigeben und archivieren" in page.text
+    assert "Freigeben und senden" in page.text and 'name="code"' not in page.text
     assert client.post(f"/proposals/{pid}/approve", data={}).status_code == 400  # CSRF fehlt
-    r = client.post(f"/proposals/{pid}/approve", data={"csrf": csrf})
-    assert r.status_code == 303
+    assert client.post(f"/proposals/{pid}/approve", data={"csrf": csrf}).status_code == 303
     with app_env.session_scope() as db:
         assert db.get(Proposal, pid).status == "executed"
 
+
+def test_cleanup_click_on_web_runs_immediately(client, app_env, world):
+    csrf = _login(client, app_env, world)
+    r = client.post(f"/mailboxes/{world['mailbox']}/messages/m3/propose", data={"action": "archive", "csrf": csrf})
+    assert r.status_code == 303 and "info=" in r.headers["location"]  # sofort erledigt, dein Klick war die Freigabe
 
 def test_high_risk_shows_airmail_and_external_marker(client, app_env, world):
     csrf = _login(client, app_env, world)
@@ -125,7 +130,9 @@ def test_revoked_key(client, app_env, world):
     assert client.get("/api/device/status", headers={"Authorization": f"Bearer {dev}"}).status_code == 401
 
 
-def test_device_flow_needs_code(client, app_env, world):
+def test_device_flow_needs_code(client, app_env, world, monkeypatch):
+    from lokyymail.config import get_settings
+    monkeypatch.setattr(get_settings(), "hermes_approvals", True)
     dev = _key(app_env, world["user"], "device")
     h = {"Authorization": f"Bearer {dev}"}
     st = client.get("/api/device/status", headers=h).json()

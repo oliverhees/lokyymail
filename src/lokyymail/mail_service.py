@@ -40,6 +40,7 @@ def list_mailboxes(db: Session, user: User, *, for_ai: bool) -> list[dict[str, A
             "can_approve": a.can_approve,
             "ai_enabled": m.ai_enabled,
             "send_disabled": m.send_disabled,
+            "auto_cleanup": m.auto_cleanup,
             "status": m.status,
         }
         for m, a in accessible_mailboxes(db, user, for_ai=for_ai)

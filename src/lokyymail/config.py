@@ -39,6 +39,16 @@ class Settings(BaseSettings):
     session_hours: int = 12
     audit_retention_days: int = 365
 
+    # Aufräumen ohne Freigabe (nur wenn pro Postfach eingeschaltet) und Rückgängig-Liste
+    auto_cleanup_per_hour: int = 60
+    undo_days: int = 7
+
+    # Telegram (eigener Bot pro Kunde!) und Freigaben direkt in Hermes
+    telegram_bot_token: str = Field(default="", repr=False)
+    hermes_approvals: bool = False  # nur einschalten, wenn Hermes getrennt läuft, siehe docs/sicherheit.md
+    daily_report_hour: int = 18  # lokale Zeit, -1 = aus
+    telegram_poll_timeout: int = 25
+
     # Anzeige-Zeitzone der Weboberfläche
     timezone: str = "Europe/Berlin"
 

@@ -56,6 +56,14 @@ Läuft MetaMCP oder Hermes im selben Coolify, kann es den MCP-Server intern unte
 erreichen. Dafür ist `LOKYY_MCP_EXTRA_HOSTS=lokyymail:8080` voreingestellt. Liegen die Dienste in
 verschiedenen Netzen, hilft der Netzwerk-Trick aus Gmail Guard (`scripts/connect-metamcp.sh`) sinngemäß.
 
+## 6. Telegram (empfohlen)
+Siehe [telegram.md](telegram.md). Freigaben aufs Handy, einfache mit einem Tipp.
+
+## Update auf eine neue Version
+1. **Backup** der Datenbank (Volume `lokyymail-db`).
+2. In Coolify **Deploy** (neues Image). Neue Tabellen und Spalten legt LokyyMail beim Start selbst an, Daten bleiben erhalten.
+3. Neue Einstellungen stehen in `.env.example`.
+
 ## Backup
 
 - Datenbank-Volume `lokyymail-db` sichern.

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "lokyymail"
-version = "0.3.0"
+version = "0.4.0"
 description = "LokyyMail: Mail-Gateway mit menschlicher Freigabe für KI-Agenten (Hermes, Claude, n8n)."
 readme = "README.md"
 requires-python = ">=3.11"

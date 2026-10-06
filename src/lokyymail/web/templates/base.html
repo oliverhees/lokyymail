@@ -13,6 +13,7 @@
   <a class="brand" href="/">Lokyy<span>Mail</span></a>
   <nav class="nav" aria-label="Hauptnavigation">
     <a href="/proposals" {% if request.url.path.startswith('/proposals') %}aria-current="page"{% endif %}>Freigaben</a>
+    <a href="/cleanup" {% if request.url.path.startswith('/cleanup') %}aria-current="page"{% endif %}>Aufgeräumt</a>
     <a href="/mailboxes" {% if request.url.path.startswith('/mailboxes') %}aria-current="page"{% endif %}>Postfächer</a>
     <a href="/keys" {% if request.url.path.startswith('/keys') %}aria-current="page"{% endif %}>Zugänge</a>
     {% if user.is_admin %}

@@ -1,7 +1,7 @@
 // LokyyMail für Hermes Desktop – die Oberfläche für Menschen.
 // Die KI schlägt vor (über den MCP-Server), du entscheidest hier.
-// Regeln: Senden und riskante Aktionen gibst du NUR auf der Freigabe-Webseite frei.
-// Kleine, interne Aktionen gehen hier mit deinem 6-stelligen Code aus der Authenticator-App.
+// Freigeben in Hermes geht nur, wenn der Administrator es eingeschaltet hat (LOKYY_HERMES_APPROVALS) – und immer mit
+// deinem 6-stelligen Code. Sonst: Webseite oder Telegram.
 //
 // Kein Build-Schritt, kein JSX: nur @hermes/plugin-sdk, react und react/jsx-runtime.
 
@@ -12,7 +12,6 @@ import { jsx, jsxs } from 'react/jsx-runtime'
 const { host, useQuery, useQueryClient } = sdk
 const ID = 'lokyymail'
 const ROUTE = '/lokyymail'
-const SEND_ACTIONS = new Set(['send', 'reply', 'forward'])
 
 // ------------------------------------------------------------------ kleine Bausteine
 
@@ -62,13 +61,13 @@ function Setup({ ctx, onDone }) {
 
 // ------------------------------------------------------------------ Freigaben
 
-function ProposalCard({ ctx, p, baseUrl, onChanged }) {
+function ProposalCard({ ctx, p, baseUrl, hermesApprovals, onChanged }) {
   const [code, setCode] = useState('')
   const [asking, setAsking] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const pv = p.preview || {}
-  const webOnly = SEND_ACTIONS.has(p.action) || p.risk_level === 'high'
+  const webOnly = !hermesApprovals
 
   const act = async (path, body) => {
     setBusy(true); setError('')
@@ -104,11 +103,11 @@ function ProposalCard({ ctx, p, baseUrl, onChanged }) {
           : jsx(Btn, { primary: true, onClick: () => setAsking(true), children: 'Freigeben…' }),
       jsx(Btn, { disabled: busy, onClick: () => act('reject', {}), children: 'Ablehnen' })
     ] }),
-    webOnly && note('Senden und riskante Aktionen gibst du aus Sicherheitsgründen nur auf der Webseite frei.')
+    webOnly && note('Freigaben in Hermes sind abgeschaltet. Gib auf der Webseite oder per Telegram frei.')
   ] })
 }
 
-function Proposals({ ctx, baseUrl }) {
+function Proposals({ ctx, baseUrl, hermesApprovals }) {
   const qc = useQueryClient()
   const q = useQuery({ queryKey: [ID, 'proposals'], queryFn: () => ctx.rest('/proposals'), refetchInterval: 15000 })
   const refresh = () => { qc.invalidateQueries({ queryKey: [ID] }) }
@@ -116,7 +115,7 @@ function Proposals({ ctx, baseUrl }) {
   if (q.isError) return note(`Freigaben nicht geladen: ${errText(q.error)}`)
   const items = (q.data && q.data.proposals) || []
   if (!items.length) return note('Nichts zu entscheiden. Sobald deine KI etwas vorschlägt, erscheint es hier.')
-  return jsx('div', { style: css.stack, children: items.map((p) => jsx(ProposalCard, { ctx, p, baseUrl, onChanged: refresh }, p.id)) })
+  return jsx('div', { style: css.stack, children: items.map((p) => jsx(ProposalCard, { ctx, p, baseUrl, hermesApprovals, onChanged: refresh }, p.id)) })
 }
 
 // ------------------------------------------------------------------ Postfach
@@ -216,7 +215,7 @@ function LokyyPage({ ctx }) {
         jsx('span', { style: { ...css.muted, marginLeft: 'auto' }, children: status.data.user.email })
       ] }),
       tab === 'proposals'
-        ? jsx(Proposals, { ctx, baseUrl: config.data.url })
+        ? jsx(Proposals, { ctx, baseUrl: config.data.url, hermesApprovals: Boolean(status.data.approvals && status.data.approvals.hermes) })
         : jsx(Mailbox, { ctx, mailboxes: status.data.mailboxes || [], onProposed: () => { refresh(); setTab('proposals') } })
     ] })
   }

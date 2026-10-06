@@ -21,7 +21,7 @@ from sqlalchemy.orm import Session
 from . import audit
 from .access import AccessDenied, require_mailbox
 from .config import get_settings
-from .models import Mailbox, Proposal, User, utcnow
+from .models import AutoAction, Mailbox, MailboxAccess, Proposal, User, utcnow
 from .providers import OutgoingMail, ProviderError, provider_for
 from .providers.gmail import split_addresses
 from .risk import SourceFlags, assess
@@ -43,6 +43,9 @@ ACTION_LABELS = {
 }
 _PROTECTED_LABELS = {"INBOX", "UNREAD", "TRASH", "SPAM", "SENT", "DRAFT", "CHAT"}
 SEND_ACTIONS = {"send", "reply", "forward"}
+# Rückgängig machbar: darf die KI (wenn pro Postfach erlaubt) ohne Freigabe tun. Papierkorb bewusst nicht.
+AUTO_ACTIONS = {"archive", "mark_read", "mark_unread", "labels", "spam", "untrash"}
+AUTO_BATCH_OPS = {"archive", "mark_read", "spam", "untrash"}
 _FINAL = {"rejected", "expired", "executed", "failed", "uncertain", "superseded", "withdrawn"}
 
 
@@ -319,9 +322,10 @@ def create_proposal(
     except ProviderError as exc:
         raise ProposalError(str(exc), status=502, code="provider") from exc
 
+    cleanup = _is_cleanup(action, payload)
     level, reasons = assess(
         settings=settings, action=action, mailbox_address=mailbox.address, recipients=recipients,
-        attachments=attachments, batch_count=batch_count, source=source,
+        attachments=attachments, batch_count=0 if cleanup else batch_count, source=source,
     )
     proposal = Proposal(
         mailbox_id=mailbox.id,
@@ -344,6 +348,7 @@ def create_proposal(
         db, "proposal.created", actor_type=via, actor_id=key_id or user.id, mailbox_id=mailbox.id,
         proposal_id=proposal.id, action=action, risk_level=level, recipients_count=len(recipients),
     )
+    _maybe_run_directly(db, proposal, user=user, mailbox=mailbox, via=via, key_id=key_id, count=max(batch_count, 1), cleanup=cleanup)
     return proposal
 
 
@@ -397,7 +402,7 @@ def public_view(p: Proposal) -> dict[str, Any]:
         "status": p.status,
         "risk_level": p.risk_level,
         "risk_reasons": p.risk_reasons,
-        "requires_code": True,  # über Hermes immer; Web nur bei hohem Risiko (siehe approve)
+        "requires_code": p.risk_level == "high",
         "preview": p.preview,
         "note": p.note,
         "requested_via": p.requested_via,
@@ -458,12 +463,12 @@ def approve(
     *,
     proposal_id: str,
     user: User,
-    via: Literal["web", "device"],
+    via: Literal["web", "device", "telegram"],
     code: str | None = None,
     web_second_factor_ok: bool = False,
 ) -> Proposal:
-    if via not in ("web", "device"):
-        raise ProposalError("Freigaben sind nur über die Webseite oder Hermes möglich.", status=403, code="forbidden")
+    if via not in ("web", "device", "telegram"):
+        raise ProposalError("Freigaben sind nur über die Webseite, Telegram oder Hermes möglich.", status=403, code="forbidden")
     p = get_visible(db, user, proposal_id)
     try:
         require_mailbox(db, user, p.mailbox_id, approve=True)
@@ -472,20 +477,26 @@ def approve(
     if p.status != "pending":
         raise ProposalError("Dieser Antrag ist bereits abgeschlossen oder abgelaufen.", status=409, code="not_pending")
 
-    if via == "device":
-        # Hermes läuft in einer Umgebung, die der Agent kontrolliert. Was das Haus verlässt
-        # oder riskant ist, wird deshalb nur außerhalb von Hermes freigegeben.
-        if p.action in SEND_ACTIONS or p.risk_level == "high":
-            raise ProposalError(
-                "Diese Aktion kann nur auf der Freigabe-Webseite freigegeben werden (Senden oder hohes Risiko).",
-                status=403, code="web_only",
-            )
-        _check_code(db, user, code)
-    else:
+    high = p.risk_level == "high"
+    if via == "web":
         if not web_second_factor_ok:
             raise ProposalError("Bitte zuerst mit Zwei-Faktor anmelden.", status=403, code="no_2fa")
-        if p.risk_level == "high":
+        if high:
             _check_code(db, user, code)
+    elif via == "telegram":
+        # Telegram kann die KI nicht mitlesen. Normal: ein Tipp. Wichtig: Code als Antwort.
+        if not user.telegram_chat_id:
+            raise ProposalError("Telegram ist für dein Konto nicht verbunden.", status=403, code="forbidden")
+        if high:
+            _check_code(db, user, code)
+    else:
+        # Hermes: Der Code läuft durch das Gateway, in dem auch die KI arbeitet. Darum standardmäßig aus.
+        if not get_settings().hermes_approvals:
+            raise ProposalError(
+                "Freigaben in Hermes sind für diese Instanz abgeschaltet. Bitte Webseite oder Telegram nutzen.",
+                status=403, code="hermes_disabled",
+            )
+        _check_code(db, user, code)
 
     expected = canonical_hash({"action": p.action, "mailbox": p.mailbox_id, "payload": p.payload})
     if expected != p.payload_hash:
@@ -598,3 +609,108 @@ def _finish(db: Session, p: Proposal, status: str, *, result: dict[str, Any] | N
         db, f"proposal.{status}", actor_type="system", mailbox_id=p.mailbox_id, proposal_id=p.id,
         action=p.action, ok=(status == "executed"),
     )
+
+
+# ------------------------------------------------------------------ Aufräumen ohne Freigabe, Rückgängig
+
+def _is_cleanup(action: str, payload: dict[str, Any]) -> bool:
+    return action in AUTO_ACTIONS or (action == "batch" and payload.get("operation") in AUTO_BATCH_OPS)
+
+
+def _undo_rows(p: Proposal) -> list[dict[str, Any]]:
+    """Vor dem Ausführen festhalten, was nötig ist, um es rückgängig zu machen."""
+    pv = p.preview or {}
+    if p.action == "batch":
+        return [
+            {"message_id": m["id"], "sender": m.get("from", ""), "subject": m.get("subject", ""), "labels": s["labels"]}
+            for m, s in zip(pv.get("messages", []), p.snapshot or [], strict=False)
+        ]
+    original = pv.get("original") or {}
+    return [{
+        "message_id": p.payload["message_id"], "sender": original.get("from", ""),
+        "subject": original.get("subject", ""), "labels": (p.snapshot or {}).get("labels", []),
+    }]
+
+
+def _maybe_run_directly(db: Session, p: Proposal, *, user: User, mailbox: Mailbox, via: str, key_id: str | None, count: int, cleanup: bool) -> None:
+    """Führt Aufräum-Anträge sofort aus, wenn das erlaubt ist.
+
+    - Mensch auf der Webseite (eigene Sitzung mit Zwei-Faktor): Sein Klick IST die Freigabe.
+    - KI oder Hermes: nur wenn das Postfach 'Aufräumen automatisch' hat, mit Stundenlimit.
+    Alles Unumkehrbare (Senden, Weiterleiten) und alles mit hohem Risiko bleibt immer bei einem Menschen.
+    """
+    if p.risk_level != "low":
+        return
+    settings = get_settings()
+    if via == "web":
+        if not (cleanup or p.action == "trash"):
+            return
+        decider, how = user.id, "web"
+    else:
+        if not (cleanup and mailbox.auto_cleanup):
+            return
+        used = db.scalar(
+            select(func.count()).select_from(AutoAction).where(
+                AutoAction.mailbox_id == mailbox.id, AutoAction.created_at >= utcnow() - timedelta(hours=1)
+            )
+        ) or 0
+        if used + count > settings.auto_cleanup_per_hour:
+            audit.log(db, "proposal.auto_limit", actor_type=via, actor_id=key_id or user.id, mailbox_id=mailbox.id, proposal_id=p.id, action=p.action)
+            return
+        decider, how = None, "auto"
+
+    rows = _undo_rows(p) if how == "auto" else []
+    operation = p.payload.get("operation") if p.action == "batch" else p.action
+    p.status = "executing"
+    p.decided_by_user_id, p.decided_via, p.decided_at = decider, how, utcnow()
+    audit.log(db, "proposal.auto_approved", actor_type="user" if decider else "system", actor_id=decider, mailbox_id=mailbox.id,
+              proposal_id=p.id, action=p.action, channel=how, risk_level=p.risk_level)
+    _execute(db, p)
+    if how == "auto" and p.status == "executed":
+        for r in rows:
+            db.add(AutoAction(
+                mailbox_id=mailbox.id, proposal_id=p.id, action=str(operation), message_id=r["message_id"],
+                sender=r["sender"][:200], subject=r["subject"][:200], labels_before=r["labels"],
+            ))
+
+
+def list_auto_actions(db: Session, user: User, *, days: int) -> list[tuple[AutoAction, Mailbox]]:
+    since = utcnow() - timedelta(days=days)
+    return list(db.execute(
+        select(AutoAction, Mailbox)
+        .join(Mailbox, Mailbox.id == AutoAction.mailbox_id)
+        .join(MailboxAccess, MailboxAccess.mailbox_id == Mailbox.id)
+        .where(MailboxAccess.user_id == user.id, AutoAction.created_at >= since)
+        .order_by(AutoAction.created_at.desc())
+    ).all())
+
+
+def undo_auto(db: Session, *, entry_id: int, user: User) -> AutoAction:
+    entry = db.get(AutoAction, entry_id)
+    if entry is None:
+        raise ProposalError("Eintrag nicht gefunden.", status=404, code="not_found")
+    try:
+        mailbox, _ = require_mailbox(db, user, entry.mailbox_id)
+    except AccessDenied as exc:
+        raise ProposalError("Eintrag nicht gefunden.", status=404, code="not_found") from exc
+    if entry.undone_at is not None:
+        raise ProposalError("Das wurde schon rückgängig gemacht.", status=409, code="already_undone")
+    try:
+        provider = provider_for(mailbox)
+        now = provider.snapshot(entry.message_id)["labels"]
+        before = list(entry.labels_before or [])
+        add = [l for l in before if l not in now]
+        remove = [l for l in now if l not in before]
+        if "TRASH" in remove:
+            provider.untrash(entry.message_id)
+            remove.remove("TRASH")
+        if "TRASH" in add:
+            provider.trash(entry.message_id)
+            add.remove("TRASH")
+        if add or remove:
+            provider.modify_labels(entry.message_id, add, remove)
+    except ProviderError as exc:
+        raise ProposalError(str(exc), status=502, code="provider") from exc
+    entry.undone_at = utcnow()
+    audit.log(db, "autoaction.undone", actor_type="user", actor_id=user.id, mailbox_id=entry.mailbox_id, action=entry.action)
+    return entry
