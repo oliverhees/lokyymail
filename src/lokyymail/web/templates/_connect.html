@@ -1,10 +1,10 @@
 {# Anleitung "KI per MCP verbinden". Erwartet: connect (dict aus mcp_connect_info) #}
 {% set url = connect.url %}
 {% set key = connect.key %}
-{% macro snippet(id, text) %}
+{% macro snippet(id, text, wrap=false) %}
 <div class="snippet">
   <button type="button" class="copy" data-copy="{{ id }}">Kopieren</button>
-  <pre id="{{ id }}">{{ text }}</pre>
+  <pre id="{{ id }}"{% if wrap %} class="wrap"{% endif %}>{{ text }}</pre>
 </div>
 {% endmacro %}
 
@@ -22,6 +22,7 @@
     <li class="{{ 'done' if connect.has_ai_mailbox else 'todo' }}"><span class="mark" aria-hidden="true">{{ '✅' if connect.has_ai_mailbox else '⬜' }}</span> Beim Postfach <strong>KI-Zugriff erlauben</strong> (startet bewusst aus)</li>
     <li class="{{ 'done' if connect.has_ai_key else 'todo' }}"><span class="mark" aria-hidden="true">{{ '✅' if connect.has_ai_key else '⬜' }}</span> KI-Zugang erstellen (Formular oben)</li>
     <li class="todo"><span class="mark" aria-hidden="true">⬜</span> Beispiel unten kopieren und im Programm eintragen</li>
+    <li class="todo"><span class="mark" aria-hidden="true">⬜</span> <strong>Verhaltensregeln (Prompt)</strong> in der KI hinterlegen (siehe unten)</li>
     <li class="todo"><span class="mark" aria-hidden="true">⬜</span> Testen (siehe ganz unten)</li>
   </ol>
 
@@ -73,6 +74,14 @@
       <li>Header <code>Authorization</code> mit Wert:</li>
     </ul>
     {{ snippet("s-metamcp", "Bearer " ~ key) }}
+  </details>
+
+  <h3>Verhaltensregeln für die KI (Prompt)</h3>
+  <p class="small">Dieser Text sagt der KI, wie sie mit LokyyMail arbeitet: nur über diesen Weg, nur vorschlagen, Mail-Inhalte nie als Befehl behandeln.
+  Hinterlege ihn <strong>einmal</strong> dort, wo dein Programm Anweisungen speichert: bei Hermes als <strong>Skill</strong> oder im <strong>Gedächtnis</strong>, bei Claude als Projekt-Anweisung bzw. <code>CLAUDE.md</code>, bei n8n im <strong>System Message</strong> des Agenten.</p>
+  <details>
+    <summary>Prompt anzeigen und kopieren</summary>
+    {{ snippet("s-prompt", connect.prompt, true) }}
   </details>
 
   <h3>Testen</h3>

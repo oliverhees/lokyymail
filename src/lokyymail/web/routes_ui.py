@@ -475,6 +475,12 @@ def propose_from_web(
 
 # ================================================================== Schlüssel
 
+def _hermes_prompt() -> str:
+    from pathlib import Path
+
+    return (Path(__file__).parent / "hermes_prompt.md").read_text(encoding="utf-8").strip()
+
+
 def mcp_connect_info(db: Session, ctx: WebContext, *, real_key: str = "") -> dict[str, Any]:
     """Daten für die Anleitung „KI per MCP verbinden“. Ohne echten Schlüssel steht ein Platzhalter drin."""
     settings = get_settings()
@@ -491,6 +497,7 @@ def mcp_connect_info(db: Session, ctx: WebContext, *, real_key: str = "") -> dic
         "has_mailbox": bool(boxes),
         "has_ai_mailbox": any(mb.ai_enabled for mb, _ in boxes),
         "has_ai_key": has_ai_key,
+        "prompt": _hermes_prompt(),
     }
 
 

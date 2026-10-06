@@ -250,3 +250,4 @@ details summary { cursor: pointer; color: var(--post); }
 .snippet .copy { position: absolute; top: 0.4rem; right: 0.4rem; }
 button.copy { font-size: 0.8rem; padding: 0.3rem 0.65rem; }
 button.small-btn { margin-left: 0.4rem; }
+.snippet pre.wrap { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 28rem; overflow-y: auto; padding-right: 5.5rem; }
