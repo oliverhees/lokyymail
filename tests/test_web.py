@@ -214,3 +214,14 @@ def test_connect_guide_shows_prompt_and_stays_in_sync(client, app_env, world):
     _login(client, app_env, world)
     page = client.get("/keys")
     assert "Verhaltensregeln für die KI" in page.text and "ausschließlich" in page.text and "untrusted_email" in page.text
+
+
+def test_mcp_rejects_device_key_with_clear_hint(client, app_env, world):
+    device = _key(app_env, world["user"], "device")
+    r = client.post("/mcp", headers={**MCP_HEADERS, "Authorization": f"Bearer {device}"}, json={"jsonrpc": "2.0", "id": 1, "method": "tools/list"})
+    assert r.status_code == 403
+    assert "lkai_" in r.json()["detail"]
+
+    _login(client, app_env, world)
+    page = client.get("/keys")
+    assert "&#34;LokyyMail&#34;: {" in page.text and "mcp.json" in page.text

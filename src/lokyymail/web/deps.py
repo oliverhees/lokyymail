@@ -175,7 +175,12 @@ def resolve_api_key(db: Session, authorization: str | None, *, kind: str) -> Key
     key_kind, prefix = parsed
     if key_kind != kind:
         # Ein KI-Schlüssel darf niemals die Geräte-Schnittstelle (mit Freigaben) benutzen – und umgekehrt.
-        raise HTTPException(status_code=403, detail="Dieser Schlüssel ist für diese Schnittstelle nicht zugelassen.")
+        hint = ""
+        if kind == "ai":
+            hint = " Für MCP brauchst du einen KI-Schlüssel (beginnt mit lkai_). Erstelle ihn in LokyyMail unter Zugänge."
+        elif kind == "device":
+            hint = " Für Hermes Desktop brauchst du einen Hermes-Desktop-Schlüssel (beginnt mit lkdv_)."
+        raise HTTPException(status_code=403, detail="Dieser Schlüssel ist für diese Schnittstelle nicht zugelassen." + hint)
     digest = sha256_hex(plaintext)
     for key in db.execute(select(ApiKey).where(ApiKey.prefix == prefix, ApiKey.kind == kind)).scalars():
         if hmac.compare_digest(key.secret_hash, digest):

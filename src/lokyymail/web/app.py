@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -46,17 +47,17 @@ class _McpKeyGate:
 
             auth = dict(scope.get("headers") or []).get(b"authorization", b"").decode("latin-1")
 
-            def check() -> int:
+            def check() -> tuple[int, str]:
                 with session_scope() as db:
                     try:
                         resolve_api_key(db, auth, kind="ai")
-                        return 200
+                        return 200, ""
                     except HTTPException as exc:
-                        return exc.status_code
+                        return exc.status_code, str(exc.detail)
 
-            status = await anyio.to_thread.run_sync(check)
+            status, detail = await anyio.to_thread.run_sync(check)
             if status != 200:
-                body = b'{"detail":"Gueltiger LokyyMail-KI-Schluessel noetig."}'
+                body = json.dumps({"detail": "Gültiger LokyyMail-KI-Schlüssel nötig. " + detail}).encode()
                 await send({"type": "http.response.start", "status": status,
                             "headers": [(b"content-type", b"application/json"), (b"www-authenticate", b"Bearer")]})
                 await send({"type": "http.response.body", "body": body})
