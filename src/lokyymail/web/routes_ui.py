@@ -6,6 +6,7 @@ import csv
 import io
 from datetime import timedelta
 from typing import Any
+from urllib.parse import quote
 
 import segno
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
@@ -290,7 +291,7 @@ def google_callback(request: Request, state: str = "", code: str = "", error: st
         )
         address = fetch_profile_address(tokens["access_token"])
     except ProviderError as exc:
-        return redirect("/mailboxes?fehler=" + str(exc).replace(" ", "+"))
+        return redirect("/mailboxes?fehler=" + quote(str(exc)))
 
     mailbox = db.execute(select(Mailbox).where(Mailbox.provider == "gmail", Mailbox.address == address)).scalar_one_or_none()
     if mailbox is None:

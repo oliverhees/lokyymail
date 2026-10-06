@@ -78,6 +78,18 @@ def exchange_code(*, client_id: str, client_secret: str, redirect_uri: str, code
     return data
 
 
+def _profile_error(resp: requests.Response) -> str:
+    """Nennt Googles Grund (z. B. Gmail API nicht aktiviert), damit man nicht raten muss."""
+    reason = ""
+    try:
+        err = resp.json().get("error") or {}
+        reason = str(err.get("message") or err.get("status") or "")[:160]
+    except ValueError:
+        pass
+    hint = " Ist die Gmail API im Google-Cloud-Projekt aktiviert?" if resp.status_code == 403 else ""
+    return f"Gmail-Profil konnte nicht gelesen werden (Google: HTTP {resp.status_code}{', ' + reason if reason else ''}).{hint}"
+
+
 def fetch_profile_address(access_token: str) -> str:
     try:
         resp = requests.get(
@@ -88,7 +100,7 @@ def fetch_profile_address(access_token: str) -> str:
     except requests.RequestException as exc:
         raise ProviderError("Gmail ist gerade nicht erreichbar.") from exc
     if resp.status_code != 200:
-        raise ProviderError("Gmail-Profil konnte nicht gelesen werden.")
+        raise ProviderError(_profile_error(resp))
     address = (resp.json().get("emailAddress") or "").strip().lower()
     if "@" not in address:
         raise ProviderError("Gmail hat keine gültige Adresse geliefert.")
