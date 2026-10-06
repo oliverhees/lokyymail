@@ -203,3 +203,14 @@ def test_mcp_connect_guide(client, app_env, world):
     assert "KI verbinden (MCP)" not in r.text
 
     assert client.get("/static/copy.js").status_code == 200
+
+
+def test_connect_guide_shows_prompt_and_stays_in_sync(client, app_env, world):
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parent.parent
+    assert (root / "hermes/prompt.md").read_text(encoding="utf-8") == (root / "src/lokyymail/web/hermes_prompt.md").read_text(encoding="utf-8"), \
+        "hermes/prompt.md und src/lokyymail/web/hermes_prompt.md müssen gleich sein"
+    _login(client, app_env, world)
+    page = client.get("/keys")
+    assert "Verhaltensregeln für die KI" in page.text and "ausschließlich" in page.text and "untrusted_email" in page.text

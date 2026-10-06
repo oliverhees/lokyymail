@@ -40,6 +40,7 @@ Sonst kann Hermes LokyyMail umgehen.
 ## 2. Prompt für Hermes
 
 Den Inhalt von [`hermes/prompt.md`](../hermes/prompt.md) in Hermes' Gedächtnis oder als Skill ablegen.
+Derselbe Text steht in LokyyMail unter **Zugänge → Verhaltensregeln für die KI (Prompt)** mit Kopier-Knopf.
 
 ## 3. Desktop-Plugin
 

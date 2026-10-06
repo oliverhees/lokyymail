@@ -41,7 +41,7 @@ lokyymail = "lokyymail.cli:main"
 where = ["src"]
 
 [tool.setuptools.package-data]
-lokyymail = ["web/templates/*.html", "web/static/*"]
+lokyymail = ["web/templates/*.html", "web/static/*", "web/hermes_prompt.md"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
