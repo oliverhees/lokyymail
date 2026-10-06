@@ -1,4 +1,6 @@
 # LokyyMail für Coolify – eine Instanz pro Kunde.
+# Das Image wird NICHT mehr in Coolify gebaut, sondern per GitHub Actions (.github/workflows/docker.yml)
+# nach ghcr.io gepusht. Coolify zieht es nur. Version festnageln: LOKYY_IMAGE=ghcr.io/oliverhees/lokyymail:0.3.0
 # Coolify: Resource → Docker Compose → dieses Repo → diese Datei.
 # Pflicht in "Environment Variables": LOKYY_PUBLIC_URL, LOKYY_MASTER_KEY, POSTGRES_PASSWORD
 # Domain in Coolify auf den Dienst "lokyymail" (Port 8080) legen.
@@ -35,7 +37,7 @@ x-env: &env
 services:
   lokyymail:
     <<: *hardening
-    build: .
+    image: ${LOKYY_IMAGE:-ghcr.io/oliverhees/lokyymail:latest}
     environment: *env
     mem_limit: 512m
     depends_on:
@@ -44,7 +46,7 @@ services:
 
   worker:
     <<: *hardening
-    build: .
+    image: ${LOKYY_IMAGE:-ghcr.io/oliverhees/lokyymail:latest}
     command: ["lokyymail", "worker"]
     environment: *env
     mem_limit: 256m
