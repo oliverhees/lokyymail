@@ -103,7 +103,9 @@ def login(request: Request, email: str = Form(...), password: str = Form(...), p
     token = create_session(db, user)
     audit.log(db, "auth.password_ok", actor_type="user", actor_id=user.id)
     resp = redirect("/login/code" if user.totp_enabled else "/setup/2fa")
-    set_cookie(resp, SESSION_COOKIE, token, max_age=get_settings().session_hours * 3600)
+    # "lax": Der Rücksprung von Google (/mailboxes/google/callback) ist eine fremde Navigation und
+    # würde mit "strict" ohne Sitzung ankommen (Endlosschleife zum Login). Schreibende Aufrufe sind per CSRF-Token geschützt.
+    set_cookie(resp, SESSION_COOKIE, token, max_age=get_settings().session_hours * 3600, samesite="lax")
     resp.delete_cookie(PRE_CSRF_COOKIE, path="/")
     return resp
 
