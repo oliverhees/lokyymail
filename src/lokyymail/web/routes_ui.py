@@ -6,6 +6,7 @@ import csv
 import io
 from datetime import timedelta
 from typing import Any
+from urllib.parse import quote
 
 import segno
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
