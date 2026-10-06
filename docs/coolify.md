@@ -13,6 +13,15 @@ Eine Instanz pro Kunde, auf dem Server des Kunden. Dauer: ca. 20 Minuten.
 
 ✅ **Fertig, wenn** Coolify die drei Dienste `lokyymail`, `worker`, `postgres` anzeigt.
 
+## 1b. Image kommt von GitHub (nicht mehr aus Coolify)
+
+Das Image baut GitHub Actions (`.github/workflows/docker.yml`) bei jedem Push auf `main` und legt es unter
+`ghcr.io/oliverhees/lokyymail` ab. Coolify zieht es nur noch.
+
+- Ist das Paket **privat**: Coolify → Servers → Docker Registries → `ghcr.io` mit GitHub-Benutzer und einem Token (`read:packages`) eintragen.
+- Oder Paket in GitHub unter *Packages → Package settings* auf **Public** stellen.
+- Feste Version statt `latest`: Variable `LOKYY_IMAGE=ghcr.io/oliverhees/lokyymail:0.3.0`.
+
 ## 2. Umgebungsvariablen
 
 | Variable | Pflicht | Wert |
@@ -61,7 +70,7 @@ Siehe [telegram.md](telegram.md). Freigaben aufs Handy, einfache mit einem Tipp.
 
 ## Update auf eine neue Version
 1. **Backup** der Datenbank (Volume `lokyymail-db`).
-2. In Coolify **Deploy** (neues Image). Neue Tabellen und Spalten legt LokyyMail beim Start selbst an, Daten bleiben erhalten.
+2. Warten, bis der GitHub-Action-Lauf „docker“ grün ist, dann in Coolify **Deploy** (zieht das neue Image). Neue Tabellen und Spalten legt LokyyMail beim Start selbst an, Daten bleiben erhalten.
 3. Neue Einstellungen stehen in `.env.example`.
 
 ## Backup
