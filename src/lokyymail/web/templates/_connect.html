@@ -36,7 +36,14 @@
   <p class="small muted">„Intern“ nutzt du nur, wenn das Programm im selben Docker-Netz wie LokyyMail läuft. Sonst immer die Adresse oben.</p>
 
   <details open>
-    <summary>Hermes</summary>
+    <summary>Hermes Desktop / Apps mit <code>mcp.json</code></summary>
+    <p class="small">Neuer Eintrag in der <code>mcp.json</code>, im selben Format wie deine anderen Server:</p>
+    {{ snippet("s-mcpjson", '"LokyyMail": {\n  "url": "' ~ url ~ '",\n  "headers": {\n    "Authorization": "Bearer ' ~ key ~ '"\n  }\n}') }}
+    <p class="small">⚠️ Der Schlüssel muss mit <code>lkai_</code> beginnen (KI-Zugang). Ein Schlüssel mit <code>lkdv_</code> (Hermes-Desktop-Zugang) wird für MCP abgelehnt, die App zeigt dann „Needs authentication“.</p>
+  </details>
+
+  <details>
+    <summary>Hermes (<code>config.yaml</code>)</summary>
     <p class="small">Schlüssel in <code>~/.hermes/.env</code>:</p>
     {{ snippet("s-hermes-env", "LOKYYMAIL_AI_KEY=" ~ key) }}
     <p class="small">Block in <code>~/.hermes/config.yaml</code>, danach Hermes bzw. Gateway neu starten:</p>
