@@ -30,5 +30,5 @@
   <div class="field"><label for="name">Name</label><input id="name" name="name" type="text" placeholder="z. B. Hermes auf dem Server" maxlength="100"></div>
   <button class="primary" type="submit">Zugang erstellen</button>
 </form>
-<p class="small muted">MCP-Adresse: <code>{{ public_url }}/mcp</code></p>
+{% include "_connect.html" %}
 {% endblock %}

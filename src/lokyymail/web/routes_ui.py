@@ -474,10 +474,29 @@ def propose_from_web(
 
 # ================================================================== Schlüssel
 
+def mcp_connect_info(db: Session, ctx: WebContext, *, real_key: str = "") -> dict[str, Any]:
+    """Daten für die Anleitung „KI per MCP verbinden“. Ohne echten Schlüssel steht ein Platzhalter drin."""
+    settings = get_settings()
+    boxes = accessible_mailboxes(db, ctx.user)
+    internal = next((h for h in settings.mcp_extra_hosts if not h.startswith(("localhost", "127.0.0.1"))), "lokyymail:8080")
+    has_ai_key = db.execute(
+        select(ApiKey.id).where(ApiKey.user_id == ctx.user.id, ApiKey.kind == "ai", ApiKey.revoked.is_(False)).limit(1)
+    ).first() is not None
+    return {
+        "url": settings.public_url.rstrip("/") + "/mcp",
+        "internal_url": f"http://{internal}/mcp",
+        "key": real_key or "lkai_DEIN_SCHLÜSSEL",
+        "real_key": bool(real_key),
+        "has_mailbox": bool(boxes),
+        "has_ai_mailbox": any(mb.ai_enabled for mb, _ in boxes),
+        "has_ai_key": has_ai_key,
+    }
+
+
 @router.get("/keys", response_class=HTMLResponse)
 def keys(request: Request, ctx: WebContext = Depends(web_user), db: Session = Depends(get_db)):
     items = db.execute(select(ApiKey).where(ApiKey.user_id == ctx.user.id).order_by(ApiKey.created_at.desc())).scalars().all()
-    return render(request, "keys.html", ctx, items=items, public_url=get_settings().public_url.rstrip("/"))
+    return render(request, "keys.html", ctx, items=items, public_url=get_settings().public_url.rstrip("/"), connect=mcp_connect_info(db, ctx))
 
 
 @router.post("/keys", response_class=HTMLResponse)
@@ -491,7 +510,10 @@ def key_create(request: Request, kind: str = Form(...), name: str = Form(...), c
     db.add(key)
     db.flush()
     audit.log(db, "key.created", actor_type="user", actor_id=ctx.user.id, key_kind=kind, key_name=name)
-    return render(request, "key_created.html", ctx, plaintext=plaintext, key=key, public_url=get_settings().public_url.rstrip("/"))
+    return render(
+        request, "key_created.html", ctx, plaintext=plaintext, key=key, public_url=get_settings().public_url.rstrip("/"),
+        connect=mcp_connect_info(db, ctx, real_key=plaintext if kind == "ai" else ""),
+    )
 
 
 @router.post("/keys/{key_id}/revoke")

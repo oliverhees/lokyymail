@@ -1,0 +1,82 @@
+{# Anleitung "KI per MCP verbinden". Erwartet: connect (dict aus mcp_connect_info) #}
+{% set url = connect.url %}
+{% set key = connect.key %}
+{% macro snippet(id, text) %}
+<div class="snippet">
+  <button type="button" class="copy" data-copy="{{ id }}">Kopieren</button>
+  <pre id="{{ id }}">{{ text }}</pre>
+</div>
+{% endmacro %}
+
+<section class="connect" id="verbinden">
+  <h2>KI verbinden (MCP)</h2>
+  {% if connect.real_key %}
+  <p class="lead">Die Beispiele unten enthalten schon <strong>deinen neuen Schlüssel</strong>. Kopiere sie jetzt, er wird später nicht mehr angezeigt.</p>
+  {% else %}
+  <p class="lead">Die Beispiele zeigen den Platzhalter <code>{{ key }}</code>. Erstelle oben einen KI-Zugang. Direkt danach siehst du dieselben Beispiele mit deinem echten Schlüssel.</p>
+  {% endif %}
+
+  <h3>Schritt für Schritt</h3>
+  <ol class="checklist">
+    <li class="{{ 'done' if connect.has_mailbox else 'todo' }}"><span class="mark" aria-hidden="true">{{ '✅' if connect.has_mailbox else '⬜' }}</span> Postfach verbinden <a href="/mailboxes">(Postfächer)</a></li>
+    <li class="{{ 'done' if connect.has_ai_mailbox else 'todo' }}"><span class="mark" aria-hidden="true">{{ '✅' if connect.has_ai_mailbox else '⬜' }}</span> Beim Postfach <strong>KI-Zugriff erlauben</strong> (startet bewusst aus)</li>
+    <li class="{{ 'done' if connect.has_ai_key else 'todo' }}"><span class="mark" aria-hidden="true">{{ '✅' if connect.has_ai_key else '⬜' }}</span> KI-Zugang erstellen (Formular oben)</li>
+    <li class="todo"><span class="mark" aria-hidden="true">⬜</span> Beispiel unten kopieren und im Programm eintragen</li>
+    <li class="todo"><span class="mark" aria-hidden="true">⬜</span> Testen (siehe ganz unten)</li>
+  </ol>
+
+  <h3>Deine Daten</h3>
+  <dl class="envelope">
+    <dt>Adresse (MCP)</dt><dd><code id="c-url">{{ url }}</code> <button type="button" class="copy small-btn" data-copy="c-url">Kopieren</button></dd>
+    <dt>Intern (Docker)</dt><dd><code id="c-int">{{ connect.internal_url }}</code> <button type="button" class="copy small-btn" data-copy="c-int">Kopieren</button></dd>
+    <dt>Header</dt><dd><code id="c-hdr">Authorization: Bearer {{ key }}</code> <button type="button" class="copy small-btn" data-copy="c-hdr">Kopieren</button></dd>
+    <dt>Übertragung</dt><dd>Streamable HTTP (nicht SSE)</dd>
+  </dl>
+  <p class="small muted">„Intern“ nutzt du nur, wenn das Programm im selben Docker-Netz wie LokyyMail läuft. Sonst immer die Adresse oben.</p>
+
+  <details open>
+    <summary>Hermes</summary>
+    <p class="small">Schlüssel in <code>~/.hermes/.env</code>:</p>
+    {{ snippet("s-hermes-env", "LOKYYMAIL_AI_KEY=" ~ key) }}
+    <p class="small">Block in <code>~/.hermes/config.yaml</code>, danach Hermes bzw. Gateway neu starten:</p>
+    {{ snippet("s-hermes-yaml", 'mcp_servers:\n  lokyymail:\n    url: "' ~ url ~ '"\n    headers:\n      Authorization: "Bearer ${LOKYYMAIL_AI_KEY}"\n    enabled: true\n    timeout: 120\n    tools:\n      resources: false\n      prompts: false') }}
+    <p class="small">Ein anderes Gmail-Werkzeug in Hermes mit eigenem Google-Zugang abschalten, sonst kann Hermes LokyyMail umgehen.</p>
+  </details>
+
+  <details>
+    <summary>Claude Code</summary>
+    {{ snippet("s-claude-code", 'claude mcp add --transport http lokyymail ' ~ url ~ ' --header "Authorization: Bearer ' ~ key ~ '"') }}
+  </details>
+
+  <details>
+    <summary>Claude Desktop</summary>
+    <p class="small">In <code>claude_desktop_config.json</code> (braucht Node.js):</p>
+    {{ snippet("s-claude-desktop", '{\n  "mcpServers": {\n    "lokyymail": {\n      "command": "npx",\n      "args": ["-y", "mcp-remote", "' ~ url ~ '", "--header", "Authorization:${LOKYY_AUTH}"],\n      "env": { "LOKYY_AUTH": "Bearer ' ~ key ~ '" }\n    }\n  }\n}') }}
+  </details>
+
+  <details>
+    <summary>n8n</summary>
+    <p class="small">Knoten <strong>MCP Client Tool</strong>:</p>
+    <ul class="small">
+      <li>Endpoint: <code>{{ url }}</code></li>
+      <li>Server Transport: <strong>HTTP Streamable</strong></li>
+      <li>Authentication: <strong>Header Auth</strong> mit Name <code>Authorization</code> und Wert:</li>
+    </ul>
+    {{ snippet("s-n8n", "Bearer " ~ key) }}
+  </details>
+
+  <details>
+    <summary>MetaMCP</summary>
+    <p class="small">Neuer MCP-Server, Typ <strong>Streamable HTTP</strong>:</p>
+    <ul class="small">
+      <li>URL: <code>{{ url }}</code> (im selben Docker-Netz: <code>{{ connect.internal_url }}</code>)</li>
+      <li>Header <code>Authorization</code> mit Wert:</li>
+    </ul>
+    {{ snippet("s-metamcp", "Bearer " ~ key) }}
+  </details>
+
+  <h3>Testen</h3>
+  <p class="small">Schreibe dem Programm diesen Satz. Es sollte <code>list_mailboxes</code> aufrufen und dein Postfach nennen:</p>
+  {{ snippet("s-test", "Welche Postfächer hast du?") }}
+</section>
+<script src="/static/copy.js" defer></script>

@@ -238,3 +238,15 @@ details summary { cursor: pointer; color: var(--post); }
 .spaced { margin-top: 1rem; }
 .code-small { width: 6.5rem !important; font-family: var(--mono); text-align: center; }
 .tight { margin: 0.35rem 0; padding-left: 1.2rem; }
+
+/* ---- KI verbinden (MCP) ---- */
+.connect { margin-top: 2.5rem; border-top: 1px solid var(--line); padding-top: 1rem; }
+.connect h3 { margin: 1.5rem 0 0.5rem; font-size: 1.05rem; }
+.checklist { list-style: none; padding: 0; margin: 0; display: grid; gap: 0.35rem; }
+.checklist .mark { display: inline-block; width: 1.5rem; }
+.checklist .done { color: var(--muted); }
+.snippet { position: relative; margin: 0.4rem 0 1rem; }
+.snippet pre { margin: 0; padding: 0.75rem 5.5rem 0.75rem 0.75rem; background: var(--paper); border: 1px solid var(--line); border-radius: 8px; font: 0.875rem/1.5 var(--mono); overflow-x: auto; white-space: pre; }
+.snippet .copy { position: absolute; top: 0.4rem; right: 0.4rem; }
+button.copy { font-size: 0.8rem; padding: 0.3rem 0.65rem; }
+button.small-btn { margin-left: 0.4rem; }
