@@ -183,3 +183,23 @@ def test_mcp_rejects_foreign_host(client, app_env, world):
     r = client.post("/mcp", headers={**MCP_HEADERS, "Authorization": f"Bearer {ai}", "Host": "evil.example"},
                     json={"jsonrpc": "2.0", "id": 1, "method": "tools/list", "params": {}})
     assert r.status_code in (400, 403, 421)
+
+
+def test_mcp_connect_guide(client, app_env, world):
+    csrf = _login(client, app_env, world)
+    page = client.get("/keys")
+    assert page.status_code == 200
+    assert "KI verbinden (MCP)" in page.text and "lkai_DEIN_SCHLÜSSEL" in page.text
+    assert "http://lokyymail:8080/mcp" in page.text
+    assert "/static/copy.js" in page.text
+
+    r = client.post("/keys", data={"kind": "ai", "name": "Hermes", "csrf": csrf})
+    assert r.status_code == 200
+    key = re.search(r'class="keybox">(lkai_[^<]+)<', r.text).group(1)
+    assert f"Bearer {key}" in r.text and "claude mcp add" in r.text and "lkai_DEIN_SCHLÜSSEL" not in r.text
+
+    # Gerätezugang bekommt die MCP-Anleitung nicht
+    r = client.post("/keys", data={"kind": "device", "name": "Desktop", "csrf": csrf})
+    assert "KI verbinden (MCP)" not in r.text
+
+    assert client.get("/static/copy.js").status_code == 200

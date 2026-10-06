@@ -8,6 +8,7 @@ Zwei Teile, beide optional kombinierbar:
 | **Desktop-Plugin** | Du siehst Postfach und Freigaben in Hermes | Hermes-Desktop-Zugang `lkdv_…` |
 
 Beide Zugänge erstellst du in LokyyMail unter **Zugänge**. Sie werden nur einmal angezeigt.
+Unter **Zugänge** steht außerdem die Anleitung **KI verbinden (MCP)** mit fertigen Beispielen zum Kopieren (Hermes, Claude Code, Claude Desktop, n8n, MetaMCP). Direkt nach dem Erstellen sind dort schon dein Schlüssel und deine Adresse eingesetzt.
 
 ## 1. MCP-Server
 
