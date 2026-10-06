@@ -147,7 +147,10 @@ def setup_2fa(request: Request, db: Session = Depends(get_db)):
     if not ctx.user.totp_secret_enc:
         ctx.user.totp_secret_enc = encrypt(new_totp_secret(), context=f"totp:{ctx.user.id}")
     secret = decrypt(ctx.user.totp_secret_enc, context=f"totp:{ctx.user.id}")
-    qr_svg = segno.make(totp_uri(secret, ctx.user.email), error="m").svg_inline(scale=5, dark="#18202b", light=None)
+    qr = segno.make(totp_uri(secret, ctx.user.email), error="m")
+    width, height = qr.symbol_size(scale=5)
+    # viewBox nötig, sonst schneidet das CSS (220px) den festen 185px-Code ab
+    qr_svg = qr.svg_inline(scale=5, dark="#18202b", light=None).replace("<svg ", f'<svg viewBox="0 0 {width} {height}" ', 1)
     return render(request, "setup_2fa.html", ctx, qr_svg=qr_svg, secret=secret)
 
 
