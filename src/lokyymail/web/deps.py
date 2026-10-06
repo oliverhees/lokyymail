@@ -150,9 +150,9 @@ def check_pre_csrf(request: Request, token: str | None) -> None:
         raise HTTPException(status_code=400, detail="Formular abgelaufen. Bitte Seite neu laden.")
 
 
-def set_cookie(response, name: str, value: str, *, max_age: int | None = None) -> None:
+def set_cookie(response, name: str, value: str, *, max_age: int | None = None, samesite: str = "strict") -> None:
     response.set_cookie(
-        name, value, max_age=max_age, httponly=True, samesite="strict",
+        name, value, max_age=max_age, httponly=True, samesite=samesite,
         secure=get_settings().secure_cookies, path="/",
     )
 
